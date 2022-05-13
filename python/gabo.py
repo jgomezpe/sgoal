@@ -76,8 +76,7 @@ def GCA( f, evals, x, fx=None ):
     if(w!=x): xc, fxc = yc, fyc
     a += 1
     evals -= 2
-  if(PRINT): print('Best * GCA trial:', fx, x)
-  print('Evals:',evals)
+  if(PRINT): print('Best GCA trial:', fx, x)
   return x, fx, evals
 
 # Checks the gene's contribution information to determine if the best bit value (allele)
@@ -153,7 +152,6 @@ def GCSA( f, evals, x, fx=None ):
 # fx: f value in the x point, if available
 def IOSA( f, evals, x, fx=None ):
   global intron
-  print('Evals....',evals)
   if(not fx): fx = evaluate(f, x) # Evaluates f on x if not done
   D = len(x) # Space dimension
 
