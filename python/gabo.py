@@ -1,5 +1,4 @@
 import random as rand
-from sgoal import  PRINT
 from sgoal import permutation
 from sgoal import randbool
 from sgoal import pick
@@ -76,7 +75,6 @@ def GCA( f, evals, x, fx=None ):
     if(w!=x): xc, fxc = yc, fyc
     a += 1
     evals -= 2
-  if(PRINT): print('Best GCA trial:', fx, x)
   return x, fx, evals
 
 # Checks the gene's contribution information to determine if the best bit value (allele)
@@ -128,7 +126,7 @@ def GCSA( f, evals, x, fx=None ):
 
   x, fx, evals = GCA(f, evals, x, fx) # Best solution obtained with GCA
 
-  if(for_all(separable) or for_all(intron)): return x, fx
+  if(for_all(separable) or for_all(intron)): return x, fx, evals
 
   failTrials = 0 if success_trial() else 1
   while(evals>=2 and failTrials<3 ):
@@ -140,7 +138,6 @@ def GCSA( f, evals, x, fx=None ):
     fy = evaluate(f,y)
     x, y, fx, fy = pick(x, y, fx, fy)
     evals -= 1
-  if(PRINT): print('Best GCA trials:', fx, x)
   return x, fx, evals
 
 
@@ -158,10 +155,6 @@ def IOSA( f, evals, x, fx=None ):
   introns = []
   for k in range(D):
     if(intron[k]): introns.append(k)
-
-  if(PRINT): 
-    print('Introns:', introns)
-    print('Removes: (intron, remaining evaluations)')
   
   N = len(introns)
   while(evals>0 and N>0):
@@ -175,8 +168,6 @@ def IOSA( f, evals, x, fx=None ):
     if( C(x, y, fx, fy, k) != 0 ):
       introns.pop(j)
       N-=1
-      if(PRINT): print('(', k, ',', evals, ')', sep='')
-  if(PRINT): print()
   return x, fx, evals
 
 # f: Function to be optimized
@@ -191,9 +182,6 @@ def GABO( f, evals, x, fx=None ):
   init_gene(D) 
 
   x, fx, evals = GCSA(f, evals, x, fx) # Best solution obtained with SLA
-  if(PRINT): print('******Best GCSA:', iter, fx, x)
-
   x, fx, evals = IOSA(f, evals, x, fx) # Best solution for 'introns'
-  if(PRINT): print('******Best IOSA:', iter, fx, x) # Remove this line if printing is not required
 
   return x, fx

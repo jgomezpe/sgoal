@@ -18,10 +18,19 @@ def normalize(weight):
   for w in weight: c += w
   return [ w/c for w in weight ]
 
+# Statistical information 
+def stats(list):
+  avg = 0.0
+  for x in list: avg += x
+  avg /= len(list)
+  std = 0.0
+  for x in list: std += (x-avg)**2
+  std = (std/len(list))**0.5
+  return avg, std
+
 ####################### Global variables ########################
 MAXIMIZE = True # Set to false if minimizing is required
 TRACE = True # Tracing f value evolution
-PRINT = True # Printing intermediate information
 
 candidate = [] # Candidate solutions 
 generated = [] # f value of each generated candidate solution
