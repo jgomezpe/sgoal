@@ -56,7 +56,7 @@ def pick( x, y, fx, fy ):
 
 # Returns the position of a value. Returns -1 if not found.
 def index(list, value):
-  for i in range(list):
+  for i in range(len(list)):
     if(list[i]==value): return i
   return -1
 
