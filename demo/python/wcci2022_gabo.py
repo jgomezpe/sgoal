@@ -65,7 +65,7 @@ for k in range(len(LENGTH)):
   
     # Computing the maximum number of function evaluations for other sgoals as the maximum of the function evaluations carried on by gabo 
     EVALS = max(budget)
-    print('Number of evaluations for other sgoals', EVALS)
+    print('Number of evaluations for GSC1 and RMHC algorithms', EVALS)
     #GSC1 experiment
     fx = [] 
     iter = [] 
