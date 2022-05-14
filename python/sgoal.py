@@ -36,7 +36,7 @@ candidate = [] # Candidate solutions
 generated = [] # f value of each generated candidate solution
 
 # Initializes global variables. 
-# WARNING: Before running any sgoal, call this method if you are tracing the method
+# WARNING: Before running any sgoal, call this method if you are tracing the sgoal
 def init():
   global generated, candidate
   generated = []
@@ -87,6 +87,11 @@ def best_evaluation():
   global generated
   return best(generated)
 
+# Number of function evaluations carried on by the sgoal 
+def evaluations():
+  global generated
+  return len(generated)
+  
 ############### VARIATION OPERATIONS ################
 # Simple crossover.
 def simple_crossover( x1, x2 ):

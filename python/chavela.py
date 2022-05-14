@@ -29,7 +29,7 @@ from sgoal import evaluate_population
 from sgoal import weighted
 from sgoal import arity
 from sgoal import pick
-from sgoal import uniform
+from sgoal import tournament
 from sgoal import MAXIMIZE
 import random as rand
 
@@ -57,12 +57,13 @@ def update_rates(h, fc, fp, rate):
   return normalize(rate) 
 
 ############ Canonical HAEA ##########
-def CHAVELA( f, evals, operators, P, fP=None ):
+def CHAVELA( f, evals, operators, P, fP=None, rates=None ):
   N = len(P)
   if( not fP and evals>=N ): 
     fP = evaluate_population(f, P)
     evals -= N
-  rates = init_rates_population(N,len(operators))
+  if( not rates ):
+    rates = init_rates_population(N,len(operators))
   while(evals>=N):
     Q = []
     fQ = []
@@ -71,7 +72,7 @@ def CHAVELA( f, evals, operators, P, fP=None ):
       h = weighted(rates[i])
       a = arity(operators[h]) 
       if a > 1: 
-        idxparents = uniform(N,a-1)
+        idxparents = tournament(fP,a-1)
         for k in idxparents:
           parents.append(P[k])     
         candidates = operators[h](*parents)
@@ -84,4 +85,4 @@ def CHAVELA( f, evals, operators, P, fP=None ):
       fQ.append(fc)
     evals -= N
     P, fP = Q, fQ
-  return P, fP, evals
+  return P, fP, evals, rates

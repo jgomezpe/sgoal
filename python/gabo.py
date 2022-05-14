@@ -1,3 +1,8 @@
+# The "GABO: Gene Analysis Base Optimization" algorithm 
+# proposed by Professors Jonatan Gomez and Elizabeth Leon from 
+# Universidad Nacional de Colombia 
+# published in proceedings of the IEEE World Congress on Computational
+# Intelligence - WCCI 2022
 import random as rand
 from sgoal import permutation
 from sgoal import randbool
@@ -16,6 +21,7 @@ intron = []
 separable = []
 
 # initializes global variables
+# D: Length of the bitstring
 def init_gene(D):
   global contribution, intron, separable
   contribution = [[] for i in range(D)]
@@ -54,18 +60,18 @@ def GCA( f, evals, x, fx=None ):
     # The complement candidate solution (used for determining locus separability)
     xc = complement(x)
     fxc = evaluate(f,xc)
-    x, xc, fx, fxc = pick(x, xc, fx, fxc)
     evals -= 1
+    x, xc, fx, fxc = pick(x, xc, fx, fxc)
 
   # Considers locus by locus (shuffles loci for reducing order effect)
   perm = permutation(D)
-  a=0
-  while(evals>=2 and a<D):
-    k = perm[a]
+  for k in perm:
+    if(evals<2): return x, fx, evals
     y = flip(x,k)
     fy = evaluate(f,y)
     yc = complement(y)
     fyc = evaluate(f,yc)    
+    evals -= 2
     cx = C(x, y, fx, fy, k)
     cxc = C(xc, yc, fxc, fyc, k)
     separable[k] = separable[k] and (cx==cxc)
@@ -73,8 +79,6 @@ def GCA( f, evals, x, fx=None ):
     y, yc, fy, fyc = pick( y, yc, fy, fyc )
     x, y, fx, fy = pick( x, y, fx, fy )
     if(w!=x): xc, fxc = yc, fyc
-    a += 1
-    evals -= 2
   return x, fx, evals
 
 # Checks the gene's contribution information to determine if the best bit value (allele)
@@ -105,13 +109,10 @@ def best_allele(k):
 def success_trial():
   global contribution
   D = len(contribution)
-  success = False
-  k = 0
-  while( k<D and not success ): 
+  for k in range(D): 
     allele, cont, trial = best_allele(k)
-    if(cont != 0): success = (trial+2 >= len(contribution[k]))
-    k += 1
-  return success
+    if(cont != 0 and trial+2 >= len(contribution[k])): return True
+  return False
 
 
 # Gene characterization analysis trials
@@ -150,38 +151,29 @@ def GCSA( f, evals, x, fx=None ):
 def IOSA( f, evals, x, fx=None ):
   global intron
   if(not fx): fx = evaluate(f, x) # Evaluates f on x if not done
-  D = len(x) # Space dimension
-
-  introns = []
-  for k in range(D):
-    if(intron[k]): introns.append(k)
-  
+  introns = [k for k in range(len(x))] #Considers each locus as intron-like
   N = len(introns)
   while(evals>0 and N>0):
     j = rand.randint(0,N-1)
-    k = introns[j]
+    k = introns[j] # Picks and analyzes one intron-like locus
     y = flip(x,k)
     fy = evaluate(f,y)
     x, y, fx, fy = pick(x, y, fx, fy)
     evals -= 1    
-    # Checks if the locus is not neutral anymore and removes it
+    # Checks if the locus is not intron-like and removes it from intron-like list
     if( C(x, y, fx, fy, k) != 0 ):
       introns.pop(j)
       N-=1
+      
   return x, fx, evals
 
 # f: Function to be optimized
 # x: initial point
 # evals: Maximum number of fitness evaluations
 # fx: f value at point x (if provided)
-def GABO( f, evals, x, fx=None ):
-
-  D = len(x) # Space dimension
-
-  # Initializes component information
-  init_gene(D) 
-
+def GABO( f, evals, x, fx=None ):  
+  init_gene(len(x)) # Initializes component information
   x, fx, evals = GCSA(f, evals, x, fx) # Best solution obtained with SLA
   x, fx, evals = IOSA(f, evals, x, fx) # Best solution for 'introns'
-
+  x, fx, evals = GCSA(f, evals, x, fx) # Best solution obtained with SLA
   return x, fx
