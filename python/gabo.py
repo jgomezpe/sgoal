@@ -173,7 +173,6 @@ def IOSA( f, evals, x, fx=None ):
 # fx: f value at point x (if provided)
 def GABO( f, evals, x, fx=None ):  
   init_gene(len(x)) # Initializes component information
-  x, fx, evals = GCSA(f, evals, x, fx) # Best solution obtained with SLA
   x, fx, evals = IOSA(f, evals, x, fx) # Best solution for 'introns'
-  x, fx, evals = GCSA(f, evals, x, fx) # Best solution obtained with SLA
+  x, fx, evals = GCSA(f, evals, x, fx) # Best solution obtained with GCSA
   return x, fx
