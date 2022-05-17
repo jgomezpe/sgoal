@@ -9,24 +9,15 @@ from sgoal import randbool
 from sgoal import pick
 from sgoal import MAXIMIZE
 from sgoal import evaluate
-from binary import bitstring
 from binary import flip
 from binary import complement
-from binary import for_all
 
 ############ GABO: Gene Analysis Bitstring Optimization #############
 # Gene information
 contribution = []
 intron = []
 separable = []
-
-# initializes global variables
-# D: Length of the bitstring
-def init_gene(D):
-  global contribution, intron, separable
-  contribution = [[] for i in range(D)]
-  intron = [True for i in range(D)]
-  separable = [True for i in range(D)]
+coding = []
 
 # Computes contribution information (relative to a value 1), i.e., some change 
 # in the f value
@@ -36,50 +27,12 @@ def init_gene(D):
 # fy: f value of y
 # k: Gene's locus
 def C(x, y, fx, fy, k):
-  global intron, contribution
+  global contribution
   if( MAXIMIZE ): c = fx-fy
   else: c = fy-fx
-  intron[k] = intron[k] and c==0
   if(x[k]==0): c = -c 
   contribution[k].append(c)
   return c
-
-# Gene characterization algorithm
-# genome: An array with each gene information, see Gene class
-# f: Function to be optimized
-# x: initial point
-# fx: f value at point x (if provided)
-# evals: Maximum number of fitness evaluations
-def GCA( f, evals, x, fx=None ):
-  global separable
-  D = len(x) # Space dimension
-  if(evals>0 and not fx):
-    fx = evaluate(f, x)
-    evals -=1
-  if( evals>0 ):
-    # The complement candidate solution (used for determining locus separability)
-    xc = complement(x)
-    fxc = evaluate(f,xc)
-    evals -= 1
-    x, xc, fx, fxc = pick(x, xc, fx, fxc)
-
-  # Considers locus by locus (shuffles loci for reducing order effect)
-  perm = permutation(D)
-  for k in perm:
-    if(evals<2): return x, fx, evals
-    y = flip(x,k)
-    fy = evaluate(f,y)
-    yc = complement(y)
-    fyc = evaluate(f,yc)    
-    evals -= 2
-    cx = C(x, y, fx, fy, k)
-    cxc = C(xc, yc, fxc, fyc, k)
-    separable[k] = separable[k] and (cx==cxc)
-    w = x
-    y, yc, fy, fyc = pick( y, yc, fy, fyc )
-    x, y, fx, fy = pick( x, y, fx, fy )
-    if(w!=x): xc, fxc = yc, fyc
-  return x, fx, evals
 
 # Checks the gene's contribution information to determine if the best bit value (allele)
 # for the gene is 0: c<0, or 1: c>0. If c=0 then a gene behaves like an intron (neutral) so 
@@ -101,78 +54,117 @@ def best_allele(k):
     if(c > cont): alle, cont, trial = a, c, i
   return alle, cont, trial
 
-# Creates a candidate solution using locus contributions.
-# For each locust gets the value of the bit (0, or 1) with the higher contribution
-# that is stored in the delta list
-# genome: An array with each gene information, see Gene class
-# returns the best candidate solution so far and its f value
-def success_trial():
-  global contribution
-  D = len(contribution)
-  for k in range(D): 
-    allele, cont, trial = best_allele(k)
-    if(cont != 0 and trial+2 >= len(contribution[k])): return True
-  return False
+# Best by gene contribution
+def best_by_gene_contribution(f, evals, x, fx):
+  if(evals>0):
+    y = [best_allele(k)[0] for k in range(len(x))] 
+    fy = evaluate(f,y)
+    x, y, fx, fy = pick(x, y, fx, fy)
+    evals -= 1
+  return x, fx, evals
+  
+# initializes global variables
+def init_GABO(f, evals, x, fx=None):
+  global intron, coding, separable, contribution
+  D = len(x)
+  separable = [True for k in range(D)]
+  contribution = [[] for k in range(D)]
+  intron = [k for k in range(D)]
+  coding = []
+  if(evals>0 and not fx):
+    fx = evaluate(f,x)
+    evals -= 1
+  P = permutation(D)
+  for k in P:
+    if(evals==0): return x, fx, evals
+    y = flip(x,k)
+    fy = evaluate(f,y)
+    evals -= 1    
+    x, y, fx, fy = pick(x, y, fx, fy)
+    if( C(x, y, fx, fy, k) != 0 ): #Determines type of gene intron/coding
+      intron.remove(k)
+      coding.append(k)  
+  return best_by_gene_contribution(f, evals, x, fx)
 
+# Introns only search algorithm
+# f: Function to be optimized
+# evals: Maximum number of fitness evaluations
+# x: initial point
+# fx: f value in the x point
+def IOSA( f, evals, x, fx):
+  global intron
+  N = len(intron)
+  if(N==0): return x, fx, evals
+  for i in range(N):
+    if(evals==0): return x, fx, evals
+    j = rand.randint(0,N-1)
+    k = intron[j] # Picks and analyzes one intron-like locus
+    y = flip(x,k)
+    fy = evaluate(f,y)
+    evals -= 1    
+    x, y, fx, fy = pick(x, y, fx, fy)
+    # Checks if the locus is not intron-like and removes it from intron-like list
+    if( C(x, y, fx, fy, k) != 0 ):
+      intron.pop(j)
+      N-=1
+  return x, fx, evals
 
-# Gene characterization analysis trials
+# Gene characterization algorithm
 # genome: An array with each gene information, see Gene class
 # f: Function to be optimized
 # x: initial point
-# evals: Maximum number of fitness evaluations
 # fx: f value at point x (if provided)
-def GCSA( f, evals, x, fx=None ):
-  global separable, intron, contribution
-  D = len(x) # Space dimension
-
-  x, fx, evals = GCA(f, evals, x, fx) # Best solution obtained with GCA
-
-  if(for_all(separable) or for_all(intron)): return x, fx, evals
-
-  failTrials = 0 if success_trial() else 1
-  while(evals>=2 and failTrials<3 ):
-    y, fy, evals = GCA(f, evals, bitstring(D)) # Best solution obtained with SLA
-    failTrials = 0 if success_trial() else failTrials + 1
-    x, y, fx, fy = pick(x,y,fx,fy)
+# evals: Maximum number of fitness evaluations
+def GCA( f, evals, x, fx ):
+  global coding, separable
+  N = len(coding) # Space dimension
+  if(N==0): return x, fx, evals
   if(evals>0):
-    y = [best_allele(k)[0] for k in range(D)] 
+    # The complement candidate solution (used for determining locus separability)
+    xc = complement(x)
+    fxc = evaluate(f,xc)
+    evals -= 1
+    x, xc, fx, fxc = pick(x, xc, fx, fxc)
+
+  # Considers locus by locus (shuffles loci for reducing order effect)
+  perm = permutation(N)
+  for i in perm:
+    k = coding[i]
+    if(evals<2): return x, fx, evals
+    y = flip(x,k)
+    fy = evaluate(f,y)
+    yc = complement(y)
+    fyc = evaluate(f,yc)    
+    evals -= 2
+    cx = C(x, y, fx, fy, k)
+    cxc = C(xc, yc, fxc, fyc, k)
+    separable[k] = separable[k] and (cx==cxc)
+    w = x
+    y, yc, fy, fyc = pick( y, yc, fy, fyc )
+    x, y, fx, fy = pick( x, y, fx, fy )
+    if(w!=x): xc, fxc = yc, fyc
+  if(evals>0):
+    y = [best_allele(k)[0] for k in range(len(x))] 
     fy = evaluate(f,y)
     x, y, fx, fy = pick(x, y, fx, fy)
     evals -= 1
   return x, fx, evals
 
-
-# Introns only search algorithm
-# genome: An array with each gene information, see Gene class
-# f: Function to be optimized
-# x: initial point
-# evals: Maximum number of fitness evaluations
-# fx: f value in the x point, if available
-def IOSA( f, evals, x, fx=None ):
-  global intron
-  if(not fx): fx = evaluate(f, x) # Evaluates f on x if not done
-  introns = [k for k in range(len(x))] #Considers each locus as intron-like
-  N = len(introns)
-  while(evals>0 and N>0):
-    j = rand.randint(0,N-1)
-    k = introns[j] # Picks and analyzes one intron-like locus
-    y = flip(x,k)
-    fy = evaluate(f,y)
-    x, y, fx, fy = pick(x, y, fx, fy)
-    evals -= 1    
-    # Checks if the locus is not intron-like and removes it from intron-like list
-    if( C(x, y, fx, fy, k) != 0 ):
-      introns.pop(j)
-      N-=1
-      
-  return x, fx, evals
-
+def stop():
+  global coding, separable
+  for k in coding:
+    if(not separable[k]): return False
+  return len(intron)==0
+  
 # f: Function to be optimized
 # x: initial point
 # evals: Maximum number of fitness evaluations
 # fx: f value at point x (if provided)
-def GABO( f, evals, x, fx=None ):  
-  init_gene(len(x)) # Initializes component information
-  x, fx, evals = IOSA(f, evals, x, fx) # Best solution for 'introns'
-  x, fx, evals = GCSA(f, evals, x, fx) # Best solution obtained with GCSA
-  return x, fx
+def GABO( f, evals, x, fx=None):
+  x, fx, evals = init_GABO(f, evals, x, fx)
+  flag = True
+  while(evals>0 and flag):
+    x, fx, evals = IOSA(f, evals, x, fx)
+    x, fx, evals = GCA(f, evals, x, fx)
+    flag = not stop()
+  return x, fx 
