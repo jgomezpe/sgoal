@@ -34,22 +34,35 @@ def C(x, y, fx, fy, k):
   contribution[k].append(c)
   return c
 
+def coding_complement(x):
+  global coding
+  N = len(coding)
+  if(N>0):
+    y = x.copy()
+    for i in coding:
+      y[i] = 1-y[i]
+  else:
+    y = complement(x)
+  return y
+    
+    
+  
 # Checks all the information about the gene's contribution to get the higher one,
 # determines the best allele (0, 1, or None) for the gene  and the first time (in checking trials) it was reached
-def best_allele(k):
+def best_allele(k, x):
   global contribution
   ba, bc = -1,-1
   for c in contribution[k]:
     if(c>0): oa,oc = 1,c
     elif(c<0): oa,oc =  0,-c
-    else: oa,oc = 0 if randbool() else 1, 0
+    else: oa,oc = x, 0
     if(oc > bc): ba, bc = oa, oc
   return ba
 
 # Best by gene contribution
 def genome_best_gene_contribution(f, evals, x, fx):
   if(evals>0):
-    y = [best_allele(k) for k in range(len(x))] 
+    y = [best_allele(k, x[k]) for k in range(len(x))] 
     fy = evaluate(f,y)
     x, y, fx, fy = pick(x, y, fx, fy)
     evals -= 1
@@ -102,7 +115,7 @@ def COSA( f, evals, x, fx ):
   N = len(coding)
   if(N==0 or evals==0): return x, fx, evals
 
-  xc = complement(x)
+  xc = coding_complement(x)
   fxc = evaluate(f,xc)
   evals -= 1
   x, xc, fx, fxc = pick(x, xc, fx, fxc)
@@ -114,7 +127,7 @@ def COSA( f, evals, x, fx ):
     if(evals<2): return x, fx, evals
     y = flip(x,k)
     fy = evaluate(f,y)
-    yc = complement(y)
+    yc = coding_complement(y)
     fyc = evaluate(f,yc)    
     evals -= 2
     cx = C(x, y, fx, fy, k)
