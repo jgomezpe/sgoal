@@ -49,15 +49,13 @@ def coding_complement(x):
   
 # Checks all the information about the gene's contribution to get the higher one,
 # determines the best allele (0, 1, or None) for the gene  and the first time (in checking trials) it was reached
-def best_allele(k, x):
+def best_allele(k, b):
   global contribution
-  ba, bc = -1,-1
-  for c in contribution[k]:
-    if(c>0): oa,oc = 1,c
-    elif(c<0): oa,oc =  0,-c
-    else: oa,oc = x, 0
-    if(oc > bc): ba, bc = oa, oc
-  return ba
+  a, c = b, 0
+  for ci in contribution[k]:
+    if(ci>c): a, c = 1, ci
+    elif(-ci>c): a, c =  0, -ci
+  return a
 
 # Best by gene contribution
 def genome_best_gene_contribution(f, evals, x, fx):
