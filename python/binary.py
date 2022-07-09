@@ -1,3 +1,9 @@
+# Copyright (c)
+# Author: Jonatan Gomez 
+# E-mail: jgomezpe@unal.edu.co
+# All rights reserved.
+# Binary search space definitions
+
 import random as rand
 from sgoal import randbool
 from sgoal import pick
@@ -36,13 +42,15 @@ def complement(x): return [1-v for v in x]
 def single_bit_mutation(x):
   return flip(x, rand.randint(0,len(x)-1))
 
-# Bit mutation. Flips a bit with the given probability
-def bit_mutation(x):
+# Bit mutation. Flips a bit with 1/|x| probability
+def bit_mutation_probability(x, p):
   y = x.copy()
-  p = 1.0/len(x)
   for i in range(len(y)):
     if( randbool(p) ): y[i] = 1 - y[i] 
   return y
+
+# Bit mutation with probability. Flips a bit with the given probability
+def bit_mutation(x): return bit_mutation_probability(x, 1.0/len(x))
 
 ##################### TEST FUNCTIONS #####################
 # MaxOnes function
@@ -125,15 +133,20 @@ def mixed(x, start=0, end=-1):
  
 #################### CLASSIC LITERATURE ALGORITHMS #####################
 # The HC algorithm suggested by Richard Palmer, that Forrest and
-# Mitchell termed "random mutation hill-climbing" (RMHC)
+# Mitchell named as "random mutation hill-climbing" (RMHC), see 
+# M. Mitchell and J. Holland, “When will a genetic algorithm outperform hill-climbing?” 
+# Santa Fe Institute, Working Papers, 01 1993.
 # f: Function to be optimized
 # evals: Maximum number of fitness evaluations
 # x: Initial point
 # fx: f value at point x
-def RMHC( f, evals, x, fx=None): return HC(f, single_bit_mutation, evals, x, fx )
+def RMHC( f, evals, x, fx=None): return HC(f, evals, single_bit_mutation, x, fx )
 
 # The Global Search Algorithm for GA-easy functions propossed by Das and Whitley 1991
-# Tries only order 1-schemas
+# Tries only order 1-schemas, see
+# R. Das and L. D. Whitley, “The only challenging problems are deceptive: Global search by solving order-1 hyperplanes,
+# in Proceedings of the 4th International Conference on Genetic Algorithms, San Diego, CA, USA,
+# July 1991 (R. K. Belew and L. B. Booker, eds.), pp. 166– 173, Morgan Kaufmann, 1991.
 # f: Function to be optimized
 # evals: Maximum number of fitness evaluations
 # x: Initial point, a random point. It is required for defining the dimension of the space 
@@ -169,7 +182,9 @@ def GS1( f, evals, x, fx=None ):
 
 # The Global Search Algorithm with complement propossed by G. Venturini 1995
 # Applies GS1 and compares the obtained solution with its complement and the 
-# best candidate solution of the S1 set (same as the best solution found)
+# best candidate solution of the S1 set (same as the best solution found), see 
+# G. Venturini, “Ga consistently deceptive functions are not challenging problems”
+# in First International Conference on Genetic Algorithms in Engineering Systems: Innovations and Applications, pp. 357–364, 1995.
 # f: Function to be optimized
 # evals: Maximum number of fitness evaluations
 # x: Initial point, a random point. It is required for defining the dimension of the space 

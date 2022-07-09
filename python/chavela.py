@@ -30,9 +30,19 @@ from sgoal import weighted
 from sgoal import arity
 from sgoal import pick
 from sgoal import tournament
-from sgoal import MAXIMIZE
+from sgoal import strict_pick
+from sgoal import tracing
 import random as rand
 
+#Chavela traced information
+RATES = [] # Tracing the evolution of rates
+FP = [] # Tracing the population's fitness evolution
+
+# Gets the chavela's traced information
+def chavela_trace():
+  global RATES,FP
+  return FP, RATES
+  
 ############ RATES OPERATIONS ############
 # Init Rates - individual level (M operators)
 def init_rates(M):
@@ -41,7 +51,7 @@ def init_rates(M):
     rate.append(rand.random())
     while rate[i] == 0:
       rate[i] = rand.random()
-  return normalize(rate)    
+  return normalize(rate)
 
 #Init Rates - Population level (A population of N individuals, M operators)
 def init_rates_population(N, M):
@@ -50,23 +60,33 @@ def init_rates_population(N, M):
 # Update rates
 def update_rates(h, fc, fp, rate):
   delta = rand.random()
-  if ((MAXIMIZE and fc>fp) or (not MAXIMIZE and fc<fp)):
-    rate[h] *= (1.0+delta)
-  else:
-    rate[h] *= (1.0-delta)
+  if(strict_pick(fp,fc)): rate[h] *= (1.0+delta)
+  else: rate[h] *= (1.0-delta)
   return normalize(rate) 
 
-############ Canonical HAEA ##########
+############ Canonical HAEA: Chavela ##########
+# f: Function to be optimized
+# evals: Maximum number of fitness evaluations
+# operators: Genetic operators
+# P: Initial population
+# fP: Fitness value for each individual of the population, if provided.
+# rates: initial rates
 def CHAVELA( f, evals, operators, P, fP=None, rates=None ):
+  global RATES, FP # Tracing lists
   N = len(P)
   if( not fP and evals>=N ): 
     fP = evaluate_population(f, P)
     evals -= N
   if( not rates ):
     rates = init_rates_population(N,len(operators))
+  if tracing(): 
+    RATES = [rates]
+    FP = [fP]
+  
   while(evals>=N):
     Q = []
     fQ = []
+    rQ = []
     for i in range(N):
       parents = [P[i]]
       h = weighted(rates[i])
@@ -79,10 +99,13 @@ def CHAVELA( f, evals, operators, P, fP=None, rates=None ):
         c = candidates[rand.randint(0,len(candidates)-1)]
       else: c = operators[h](parents[0])     
       fc = evaluate(f,c)
-      rates[i] = update_rates(h, fc, fP[i], rates[i])
+      rQ.append(update_rates(h, fc, fP[i], rates[i]))
       c, p, fc, fp = pick(P[i], c, fP[i], fc)
       Q.append(c)
       fQ.append(fc)
     evals -= N
-    P, fP = Q, fQ
+    P, fP, rates = Q, fQ, rQ
+    if tracing(): 
+      RATES.append(rates.copy())
+      FP.append(fP)
   return P, fP, evals, rates

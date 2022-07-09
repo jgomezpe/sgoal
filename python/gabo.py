@@ -1,3 +1,7 @@
+# Copyright (c)
+# Authors: Jonatan Gomez and Elizabeth León  
+# E-mails: jgomezpe@unal.edu.co and eleonguz@unal.edu.co
+# All rights reserved.
 # The "GABO: Gene Analysis Base Optimization" algorithm 
 # proposed by Professors Jonatan Gomez and Elizabeth Leon from 
 # Universidad Nacional de Colombia 
@@ -5,7 +9,6 @@
 # Intelligence - WCCI 2022
 import random as rand
 from sgoal import permutation
-from sgoal import randbool
 from sgoal import pick
 from sgoal import MAXIMIZE
 from sgoal import evaluate
@@ -18,6 +21,15 @@ contribution = []
 intron = []
 separable = []
 coding = []
+
+# Initializes the gene information 
+# D: Bitstring's length (number of genes)
+def init(D):
+  global intron, coding, separable, contribution
+  separable = [True for k in range(D)]
+  contribution = [[] for k in range(D)]
+  intron = [k for k in range(D)]
+  coding = []
 
 # Computes contribution information (relative to a value 1), i.e., some change 
 # in the f value
@@ -34,6 +46,9 @@ def C(x, y, fx, fy, k):
   contribution[k].append(c)
   return c
 
+# Computes the coding complement of a genome. 
+# The coding complement flips each gene that is considered coding and maintains other genes the same
+# x: Genome to be complemented in the coding-like genes
 def coding_complement(x):
   global coding
   N = len(coding)
@@ -44,11 +59,11 @@ def coding_complement(x):
   else:
     y = complement(x)
   return y
-    
-    
-  
+      
 # Checks all the information about the gene's contribution to get the higher one,
-# determines the best allele (0, 1, or None) for the gene  and the first time (in checking trials) it was reached
+# determines the best allele (0, 1, or None) for the gene
+# k: Locus (gene's position)
+# b: Current value of the gene (allele)
 def best_allele(k, b):
   global contribution
   a, c = b, 0
@@ -57,7 +72,11 @@ def best_allele(k, b):
     elif(-ci>c): a, c =  0, -ci
   return a
 
-# Best by gene contribution
+# Creates a genome with its best genes according to gene contribution and return the best between it and the original genome
+# f: Function to be optimized
+# evals: Maximum number of fitness evaluations
+# x: current geneme, used for completing intron-like genes
+# fx: Fitness value of the current genome
 def genome_best_gene_contribution(f, evals, x, fx):
   if(evals>0):
     y = [best_allele(k, x[k]) for k in range(len(x))] 
@@ -66,7 +85,11 @@ def genome_best_gene_contribution(f, evals, x, fx):
     evals -= 1
   return x, fx, evals
   
-# initializes global variables
+# Initializes global variables and does an initial gene analysis
+# f: Function to be optimized
+# evals: Maximum number of fitness evaluations
+# x: Current geneme
+# fx: Fitness value of the current genome
 def ICSplit(f, evals, x, fx):
   global intron, coding, separable, contribution
   P = permutation(len(x))
@@ -138,13 +161,7 @@ def COSA( f, evals, x, fx ):
   x, fx, evals = genome_best_gene_contribution(f, evals, x, fx)
   return x, fx, evals
 
-def init(D):
-  global intron, coding, separable, contribution
-  separable = [True for k in range(D)]
-  contribution = [[] for k in range(D)]
-  intron = [k for k in range(D)]
-  coding = []
-
+# Gabo's stop condition
 def stop():
   global coding, intron, separable
   for k in coding:

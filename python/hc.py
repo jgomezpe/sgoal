@@ -1,13 +1,18 @@
+# Copyright (c)
+# Author: Jonatan Gomez 
+# E-mail: jgomezpe@unal.edu.co
+# All rights reserved.
+# Classical Hill Climbing Algorithm with neutral mutations
 from sgoal import pick
 from sgoal import evaluate
 
 # Classical Hill Climbing Algorithm with neutral mutations
 # f: Function to be optimized
-# variation: Variation operation
 # evals: Maximum number of fitness evaluations
+# variation: Variation operation
 # x: Initial point
 # fx: f value at point x (if provided)
-def HC( f, variation, evals, x, fx=None):
+def HC( f, evals, variation, x, fx=None):
   if(evals>0 and not fx): 
     fx = evaluate(f, x)
     evals-=1
