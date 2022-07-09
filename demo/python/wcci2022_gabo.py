@@ -15,10 +15,11 @@ from sgoal import evaluations
 from sgoal import stats
 from binary import GSC1
 from binary import RMHC
-from ga import GGA
-from ga import SSGA
+from ga import basic_binary_GGA
+from ga import basic_binary_SSGA
 from chavela import CHAVELA
 from gabo import GABO
+from real import gaussian_mutation
 
 def round(x): return (int(100*x+0.5))/100
   
@@ -34,7 +35,7 @@ def report(sgoal, fx, iter, budget, sr):
   print(sgoal, sr, avg, std, avg_iter, std_iter, avg_budget,  std_budget)
   return avg, std, avg_iter, std_iter, avg_budget, std_budget
 
-EXP = 10 # Number of experiments
+EXP = 100 # Number of experiments
 
 D = 120 # Bitstring length
 print('=================', D, '=================')
@@ -44,7 +45,7 @@ MAX_EVALS = 100*D # Maximum number of function evaluations carried on by gabo (m
 #Function
 testbed = [maxones, deceptive, boundedly, royalroad8, mixed] # Testbed
 name = ['MaxOnes','GD3','GBD4','RR1','Mixed']
-FUNCTION = 2 # Testing the deceptive function. Change the number accordingly
+FUNCTION = 0 # Testing the deceptive function. Change the number accordingly
 OPTIMUM = [D, 10*D, D, D, 47*D//20] # Optimum value of the associated test function
 
 print('***************', name[FUNCTION], '***************')
@@ -100,7 +101,7 @@ budget = []
 sr = 0
 for i in range(EXP):
   init()
-  P, fP, evals = SSGA(testbed[FUNCTION], MAX_EVALS, 0.7, simple_crossover, bit_mutation, bitstring_population(100,D))
+  P, fP, evals = basic_binary_SSGA(testbed[FUNCTION], MAX_EVALS, 100, D)
   sr += 1 if success_evaluation(OPTIMUM[FUNCTION]) != -1 else 0
   fy, k = best_evaluation()
   fx.append(fy)
@@ -115,7 +116,7 @@ budget = []
 sr = 0
 for i in range(EXP):
   init()
-  P, fP, evals = GGA(testbed[FUNCTION], MAX_EVALS, 0.7, simple_crossover, bit_mutation, bitstring_population(100,D))
+  P, fP, evals = basic_binary_GGA(testbed[FUNCTION], MAX_EVALS, 100, D)
   sr += 1 if success_evaluation(OPTIMUM[FUNCTION]) != -1 else 0
   fy, k = best_evaluation()
   fx.append(fy)
@@ -137,3 +138,4 @@ for i in range(EXP):
   iter.append(k)
   budget.append(MAX_EVALS)
 report('CHAVELA', fx, iter, budget, sr)
+
