@@ -3,15 +3,15 @@
 # E-mail: jgomezpe@unal.edu.co
 # All rights reserved.
 # Classical Genetic Algorithms
-from sgoal import evaluate_population
-from sgoal import evaluate
-from sgoal import best
-from sgoal import tracing
-from sgoal import tournament
-from sgoal import randbool
-from sgoal import simple_crossover
-from binary import bit_mutation_probability
-from binary import bitstring_population
+from sgoal.core import evaluate_population
+from sgoal.core import evaluate
+from sgoal.core import best
+from sgoal.core import tracing
+from sgoal.core import tournament
+from sgoal.util import randbool
+from sgoal.core import simple_crossover
+from sgoal.binary import bit_mutation_probability
+from sgoal.binary import bitstring_population
 
 # Tracing the population's fitness evolution
 FP = []

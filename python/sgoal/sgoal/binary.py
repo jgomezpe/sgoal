@@ -5,11 +5,11 @@
 # Binary search space definitions
 
 import random as rand
-from sgoal import randbool
-from sgoal import pick
-from sgoal import evaluate
-from sgoal import MAXIMIZE
-from hc import HC
+from sgoal.util import randbool
+from sgoal.core import pick
+from sgoal.core import evaluate
+from sgoal.core import MAXIMIZE
+from sgoal.hc import HC
 
 ##################### BIT STRING SOLUTION AND POPULATION #####################
 # A bitstring of length L

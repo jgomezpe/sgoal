@@ -5,8 +5,8 @@
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
 # Beyer, Hans-Georg & Schwefel, Hans-Paul. (2002). Evolution strategies - A comprehensive introduction. 
 # Natural Computing. 1. 3-52. 10.1023/A:1015059928466. 
-from sgoal import pick
-from sgoal import evaluate
+from sgoal.core import pick
+from sgoal.core import evaluate
 
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
 # Beyer, Hans-Georg & Schwefel, Hans-Paul. (2002). Evolution strategies - A comprehensive introduction. 

@@ -8,12 +8,12 @@
 # published in proceedings of the IEEE World Congress on Computational
 # Intelligence - WCCI 2022
 import random as rand
-from sgoal import permutation
-from sgoal import pick
-from sgoal import MAXIMIZE
-from sgoal import evaluate
-from binary import flip
-from binary import complement
+from sgoal.util import permutation
+from sgoal.core import pick
+from sgoal.core import MAXIMIZE
+from sgoal.core import evaluate
+from sgoal.binary import flip
+from sgoal.binary import complement
 
 ############ GABO: Gene Analysis Bitstring Optimization #############
 # Gene information

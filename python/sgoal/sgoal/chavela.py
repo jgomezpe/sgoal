@@ -23,15 +23,15 @@
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from sgoal import normalize
-from sgoal import evaluate
-from sgoal import evaluate_population
-from sgoal import weighted
-from sgoal import arity
-from sgoal import pick
-from sgoal import tournament
-from sgoal import strict_pick
-from sgoal import tracing
+from sgoal.util import normalize
+from sgoal.core import evaluate
+from sgoal.core import evaluate_population
+from sgoal.core import weighted
+from sgoal.core import arity
+from sgoal.core import pick
+from sgoal.core import tournament
+from sgoal.core import strict_pick
+from sgoal.core import tracing
 import random as rand
 
 #Chavela traced information

@@ -1,7 +1,7 @@
 import math
 import numpy
 import random as rand
-from sgoal import randbool 
+from sgoal.util import randbool 
 
 def rastrigin_1( x ):
 	return x*x - 10.0*math.cos(2.0*math.pi*x)

@@ -3,8 +3,8 @@
 # E-mail: jgomezpe@unal.edu.co
 # All rights reserved.
 # Classical Hill Climbing Algorithm with neutral mutations
-from sgoal import pick
-from sgoal import evaluate
+from sgoal.core import pick
+from sgoal.core import evaluate
 
 # Classical Hill Climbing Algorithm with neutral mutations
 # f: Function to be optimized
