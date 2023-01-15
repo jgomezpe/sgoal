@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+import setuptools
+from packagename.version import Version
 
-from setuptools import setup
 
-setup(name='sgoal',
+setuptools.setup(name='sgoal',
       version=Version('1.0.0').number,
       description='Stochastic Global Optimization Algorithms Python Package',
       long_description=open('README.md').read().strip(),
