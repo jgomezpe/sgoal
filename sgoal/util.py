@@ -1,3 +1,5 @@
+import random as rand
+
 ############### USEFUL FUNCTIONS ################
 # Generates a boolean value according to probability p ( True with probability p, False otherwise )
 def randbool(p=0.5):
