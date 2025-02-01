@@ -23,11 +23,11 @@
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from sgoal import normalize
-from sgoal import SGoal
-from sgoal import weighted
-from sgoal import arity
-from sgoal import tournament
+from core import normalize
+from core import SGoal
+from core import weighted
+from core import arity
+from core import tournament
 import random as rand
 
 #Chavela traced information

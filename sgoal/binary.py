@@ -5,11 +5,11 @@
 # Binary search space definitions
 
 import random as rand
-from sgoal import Space, transposition
-from sgoal import SGoal
-from sgoal import tournament
-from sgoal import simplexover
-from sgoal import randbool
+from core import Space, transposition
+from core import SGoal
+from core import tournament
+from core import simplexover
+from core import randbool
 from hc import HC
 from ga import GGA
 from ga import SSGA

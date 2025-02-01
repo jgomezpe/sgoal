@@ -3,7 +3,7 @@
 # E-mail: jgomezpe@unal.edu.co
 # All rights reserved.
 # Classical Hill Climbing Algorithm with neutral mutations
-from sgoal import SGoal
+from core import SGoal
 
 # Classical Hill Climbing Algorithm with neutral mutations
 class HC(SGoal):

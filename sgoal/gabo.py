@@ -8,8 +8,8 @@
 # published in proceedings of the IEEE World Congress on Computational
 # Intelligence - WCCI 2022
 import random as rand
-from sgoal import SGoal
-from sgoal import permutation
+from core import SGoal
+from core import permutation
 from binary import flip
 from binary import complement
 

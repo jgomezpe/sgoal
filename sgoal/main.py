@@ -9,16 +9,16 @@ from binary import RMHC
 from binary import BitArrayHC
 from gabo import GABO
 from gabo2 import GABO2
-from sgoal import experiment
+from core import experiment
 
 #Main program
 R = 10
 D = 120
 EVALS = 100*D
 problem = BitArrayProblem('mixed', D)
-sgoal = [GABO2, GABO, BitArrayHC, RMHC, BitArrayR1_5, GS1, GSC1, BitArrayGGA, BitArraySSGA, BitArrayCHAVELA]
+core = [GABO2, GABO, BitArrayHC, RMHC, BitArrayR1_5, GS1, GSC1, BitArrayGGA, BitArraySSGA, BitArrayCHAVELA]
 
-for s in sgoal:
+for s in core:
   f, evals, sr = experiment(s, problem, EVALS, R)
   print( sum(f)/R, sum(evals)/R, sr) 
 
