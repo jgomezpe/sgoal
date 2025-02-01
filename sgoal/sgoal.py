@@ -114,7 +114,7 @@ class SGoal:
     self.f = problem['f']
     self.space = problem['space']
     self.minimize = problem['type'].lower()=='min'
-    self.optimum = problem['optimum'] if 'optimum' in problem else 'unknown'
+    self.optimum = problem['optimum'] if 'optimum' in problem else None
     self.count = 0
     self.result = {}
     self.TRACE = False
@@ -146,7 +146,7 @@ class SGoal:
   def evalpop(self, P):
     i=0
     fP = []
-    while(not self.stop() and i<len(P)):
+    while(self.caneval() and i<len(P)):
       fP.append(self.evalone(P[i]))
       i+=1
     return fP
@@ -156,8 +156,14 @@ class SGoal:
       return self.evalone(x)
     return self.evalpop(x)
 
+  def caneval(self, n=1):
+    return self.count+n <= self.evals
+  
+  def optimumfound(self):
+    return self.result['f']==self.optimum
+   
   def stop(self):
-    return self.count >= self.evals or ('f' in self.result and self.result['f']==self.optimum)
+    return not self.caneval() or self.optimumfound()
 
   def next(self, P, fP):
     return P, fP
@@ -190,3 +196,12 @@ class SGoal:
     if('evals' not in self.result):
       self.result['evals'] = self.count
     return self.result
+
+
+def experiment(sgoal, problem, MAXEVALS, R=100):
+  opt = problem['optimum'] if 'optimum' in problem else None
+  r = [sgoal(problem).run(MAXEVALS) for i in range(R)]
+  fx = [y['f'] for y in r]
+  evals = [y['evals'] for y in r]
+  sr = sum([1 if f==opt else 0 for f in fx]) / R
+  return fx, evals, sr

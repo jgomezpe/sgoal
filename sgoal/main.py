@@ -1,74 +1,24 @@
-from binary import binaryproblem
-from binary import bitCHAVELA
-from binary import bitR1_5
-from binary import bitGGA
-from binary import bitSSGA
-from binary import DGS1
-from binary import DGSC1
+from binary import BitArrayProblem
+from binary import BitArrayCHAVELA
+from binary import BitArrayR1_5
+from binary import BitArrayGGA
+from binary import BitArraySSGA
+from binary import GS1
+from binary import GSC1
 from binary import RMHC
-from binary import bitmutation
-from hc import HC
+from binary import BitArrayHC
 from gabo import GABO
-
+from gabo2 import GABO2
+from sgoal import experiment
 
 #Main program
+R = 10
 D = 120
-problem = binaryproblem('mixed', D)
+EVALS = 100*D
+problem = BitArrayProblem('mixed', D)
+sgoal = [GABO2, GABO, BitArrayHC, RMHC, BitArrayR1_5, GS1, GSC1, BitArrayGGA, BitArraySSGA, BitArrayCHAVELA]
 
-sgoal = GABO(problem)
-r = sgoal.run(100*D, True)
-print(i, r['evals'], r['f'])
-#print(r['trace'])
-#print(r['besttrace'])
-#print(r['poptrace'])
+for s in sgoal:
+  f, evals, sr = experiment(s, problem, EVALS, R)
+  print( sum(f)/R, sum(evals)/R, sr) 
 
-sgoal = bitCHAVELA(problem)
-r = sgoal.run(100*D, True)
-print(i, r['evals'], r['f'])
-#print(r['trace'])
-#print(r['besttrace'])
-#print(r['poptrace'])
-
-sgoal = bitR1_5(problem)
-r = sgoal.run(100*D, True)
-print(r['evals'], r['f'])
-#print(r['trace'])
-#print(r['besttrace'])
-
-sgoal = HC(problem, bitmutation)
-r = sgoal.run(100*D, True)
-print(r['evals'], r['f'])
-#print(r['trace'])
-#print(r['besttrace'])
-
-sgoal = RMHC(problem)
-r = sgoal.run(100*D, True)
-print(r['evals'], r['f'])
-#print(r['trace'])
-#print(r['besttrace'])
-
-sgoal = DGS1(problem)
-r = sgoal.run(100*D, True)
-print(r['evals'], r['f'])
-#print(r['trace'])
-#print(r['besttrace'])
-
-sgoal = DGSC1(problem)
-r = sgoal.run(100*D, True)
-print(r['evals'], r['f'])
-#print(r['trace'])
-#print(r['besttrace'])
-
-sgoal = bitGGA(problem)
-r = sgoal.run(100*D, True)
-print(r['evals'], r['f'])
-#print(r['trace'])
-#print(r['besttrace'])
-#print(r['poptrace'])
-
-sgoal = bitSSGA(problem)
-r = sgoal.run(100*D, True)
-print(r['evals'], r['f'])
-#print(r['trace'])
-#print(r['besttrace'])
-#print(r['poptrace'])

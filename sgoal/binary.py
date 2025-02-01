@@ -17,7 +17,7 @@ from chavela import CHAVELA
 from rule_1_5th import Rule_1_5th
 
 # BitArray Space
-class BitSpace(Space):
+class BitArraySpace(Space):
   def __init__(self, D):
     self.D = D
 
@@ -67,6 +67,8 @@ def bitmutation(x): return bitmutationprob(x, 1.0/len(x))
 
 
 #################### CLASSIC LITERATURE ALGORITHMS #####################
+def BitArrayHC(problem): return HC(problem, bitmutation)
+
 # The HC algorithm suggested by Richard Palmer, that Forrest and
 # Mitchell named as "random mutation hill-climbing" (RMHC), see
 # M. Mitchell and J. Holland, “When will a genetic algorithm outperform hill-climbing?”
@@ -158,19 +160,19 @@ def GSC1(problem): return GGSC1(problem, -1)
 
 def DGSC1(problem): return GGSC1(problem, problem['space'].D)
 
-def bitGAconfig(D):
+def BitArrayGAconfig(D):
   return {'selection': tournament, 'xover': simplexover, 'xr':0.7, 'mutation':bitmutation, 'N':D//2}
   
-def bitGGA(problem):
-  return GGA(problem, bitGAconfig(problem['space'].D))
+def BitArrayGGA(problem):
+  return GGA(problem, BitArrayGAconfig(problem['space'].D))
 
-def bitSSGA(problem):
-  return SSGA(problem, bitGAconfig(problem['space'].D))
+def BitArraySSGA(problem):
+  return SSGA(problem, BitArrayGAconfig(problem['space'].D))
 
-def bitCHAVELA(problem):
+def BitArrayCHAVELA(problem):
   return CHAVELA(problem, {'operators':[bitmutation, simplexover, transposition], 'N':problem['space'].D//2}) 
 
-def bitR1_5(problem):
+def BitArrayR1_5(problem):
   D = problem['space'].D
   return Rule_1_5th(problem, {'mr':1/D, 'mutation': bitmutationprob, 'G':D, 'a':0.9}) 
 
@@ -278,15 +280,15 @@ def mixed2(x, start=0, end=-1):
   return f 
 
 ##################### TEST PROBLEMS ####################
-def binaryproblem(f, D):
+def BitArrayProblem(f, D):
   if(f=='maxones'):
-    return {'f':maxones, 'space': BitSpace(D), 'optimum':D, 'type':'max'}
+    return {'f':maxones, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
   if(f=='deceptive'):
-    return {'f':deceptive, 'space': BitSpace(D), 'optimum':10*D, 'type':'max'}
+    return {'f':deceptive, 'space': BitArraySpace(D), 'optimum':10*D, 'type':'max'}
   if(f=='boundedly'):
-    return {'f':boundedly, 'space': BitSpace(D), 'optimum':D, 'type':'max'}
+    return {'f':boundedly, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
   if(f=='royalroad8'):
-    return {'f':royalroad8, 'space': BitSpace(D), 'optimum':D, 'type':'max'}
+    return {'f':royalroad8, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
   if(f=='mixed'):
-    return {'f':mixed, 'space': BitSpace(D), 'optimum':47*D/20, 'type':'max'}
-  return {'f':maxones, 'space': BitSpace(D), 'optimum':D, 'type':'max'}
+    return {'f':mixed, 'space': BitArraySpace(D), 'optimum':47*D/20, 'type':'max'}
+  return {'f':maxones, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}

@@ -81,7 +81,7 @@ class GABO(SGoal):
   def ICSplit(self, x, fx):
     P = permutation(len(x))
     for k in P:
-      if(self.stop()): return x, fx
+      if(not self.caneval()): return x, fx
       y = flip(x,k)
       fy = self.evalone(y)
       x, fx, y, fy = self.pick(x, fx, y, fy)
@@ -104,7 +104,7 @@ class GABO(SGoal):
     rand.shuffle(self.intron)
     i=0
     while(i<N):
-      if(self.stop()): return x, fx
+      if(not self.caneval()): return x, fx
       k = self.intron[i] # Picks and analyzes one intron-like locus
       y = flip(x,k)
       fy = self.evalone(y)
@@ -130,9 +130,6 @@ class GABO(SGoal):
     else:
       y = complement(x)
     return y
-
-  def stop2(self):
-    return self.evals<self.count+2
     
   # Gene characterization algorithm
   # genome: An array with each gene information, see Gene class
@@ -141,6 +138,8 @@ class GABO(SGoal):
   # fx: f value at point x (if provided)
   # evals: Maximum number of fitness evaluations
   def COSA( self, x, fx ):
+    if(len(self.coding)==0 or not self.caneval()): 
+      return x, fx
     N = len(self.coding)
     xc = self.coding_complement(x)
     fxc = self.evalone(xc)
@@ -150,7 +149,7 @@ class GABO(SGoal):
     perm = permutation(N)
     for i in perm:
       k = self.coding[i]
-      if(self.stop2()): 
+      if(not self.caneval(2)): 
         return x, fx
       y = flip(x,k)
       fy = self.evalone(y)
@@ -175,12 +174,10 @@ class GABO(SGoal):
   def run( self, MAXEVALS, TRACE=False):
     x, fx = self.init(MAXEVALS, TRACE)
     x, fx = self.ICSplit(x, fx)
-    if(len(self.coding)>0):
-      x, fx = self.COSA(x, fx)
+    x, fx = self.COSA(x, fx)
     while(not self.stop()):
       x, fx = self.IOSA(x, fx)
-      if(len(self.coding)>0 and not self.stop()):
-        x, fx = self.COSA(x, fx)
+      x, fx = self.COSA(x, fx)
     self.tracing(x,fx)
     if('evals' not in self.result):
       self.result['evals'] = self.count

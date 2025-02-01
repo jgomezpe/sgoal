@@ -18,15 +18,16 @@ class GGA(SGoal):
     self.xr = config['xr']
     self.xover = config['xover']
     self.N = config['N']
+    if(self.N%2==1): 
+      self.N+=1
     self.poptrace = []
 
   def next(self, P, fP):
     Q = []
     fQ = []
-    i=0
-    while( i<self.N and not self.stop() ):
+    for i in range(0,self.N,2):
       idx1, idx2 = self.selection(fP, 2, self.minimize)
-      if randbool(self.xr):
+      if self.caneval(2) and randbool(self.xr):
         a, b = self.xover(P[idx1], P[idx2])
         a = self.mutation(a)
         b = self.mutation(b)
@@ -40,7 +41,6 @@ class GGA(SGoal):
         Q.append( P[idx2] )
         fQ.append(fP[idx1] )
         fQ.append(fP[idx2] )
-      i += 2
     P = Q
     fP = fQ
     return P, fP
@@ -51,8 +51,8 @@ class SSGA(GGA):
     GGA.__init__(self, problem, config)
 
   def next(self, P, fP):
-    i = 0
-    while( i<self.N and not self.stop() ):
+    i=0
+    while(i<self.N and self.caneval(2)):
       idx1, idx2 = self.selection(fP, 2, self.minimize)
       p1, p2 = P[idx1], P[idx2]
       a, b = self.xover(p1, p2)

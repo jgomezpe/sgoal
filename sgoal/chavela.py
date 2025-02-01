@@ -99,24 +99,27 @@ class CHAVELA(SGoal):
     Q = []
     fQ = []
     rQ = []
-    i = 0
-    while( not self.stop() and i<self.N):
-      parents = [P[i]]
-      h = weighted(self.rates[i])
-      a = arity(self.operators[h]) 
-      if a > 1: 
-        idxparents = tournament(fP,a-1, self.minimize)
-        for k in idxparents:
-          parents.append(P[k])     
-        candidates = self.operators[h](*parents)
-        c = candidates[rand.randint(0,len(candidates)-1)]
-      else: 
-        c = self.operators[h](parents[0])     
-      fc = self.evalone(c)
-      rQ.append(self.update_rates(h, fc, fP[i], self.rates[i]))
-      c, fc, p, fp = self.pick(P[i], fP[i], c, fc)
-      Q.append(c)
-      fQ.append(fc)
-      i += 1
+    for i in range(self.N):
+      if(self.caneval()):
+        parents = [P[i]]
+        h = weighted(self.rates[i])
+        a = arity(self.operators[h]) 
+        if a > 1: 
+          idxparents = tournament(fP,a-1, self.minimize)
+          for k in idxparents:
+            parents.append(P[k])     
+          candidates = self.operators[h](*parents)
+          c = candidates[rand.randint(0,len(candidates)-1)]
+        else: 
+          c = self.operators[h](parents[0])     
+        fc = self.evalone(c)
+        rQ.append(self.update_rates(h, fc, fP[i], self.rates[i]))
+        c, fc, p, fp = self.pick(P[i], fP[i], c, fc)
+        Q.append(c)
+        fQ.append(fc)
+      else:
+        Q.append(P[i])
+        fQ.append(fP[i])
+        rQ.append(self.rates[i])
     P, fP, self.rates = Q, fQ, rQ
     return P, fP
