@@ -1,1 +1,1 @@
-from .sgoal import Space
+
