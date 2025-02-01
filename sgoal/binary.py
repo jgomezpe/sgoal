@@ -5,16 +5,16 @@
 # Binary search space definitions
 
 import random as rand
-from sgoal. core import Space, transposition
-from sgoal. core import SGoal
-from sgoal. core import tournament
-from sgoal. core import simplexover
-from sgoal. core import randbool
-from sgoal. hc import HC
-from sgoal. ga import GGA
-from sgoal. ga import SSGA
-from sgoal. chavela import CHAVELA
-from sgoal. rule_1_5th import Rule_1_5th
+from sgoal.core import Space, transposition
+from sgoal.core import SGoal
+from sgoal.core import tournament
+from sgoal.core import simplexover
+from sgoal.core import randbool
+from sgoal.hc import HC
+from sgoal.ga import GGA
+from sgoal.ga import SSGA
+from sgoal.chavela import CHAVELA
+from sgoal.rule_1_5th import Rule_1_5th
 
 # BitArray Space
 class BitArraySpace(Space):
