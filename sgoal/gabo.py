@@ -3,15 +3,15 @@
 # E-mails: jgomezpe@unal.edu.co and eleonguz@unal.edu.co
 # All rights reserved.
 # The "GABO: Gene Analysis Base Optimization" algorithm 
-# proposed by Professors Jonatan Gomez and Elizabeth Leon from 
+# proposed by Professors Jonatan Gomez and Elizabeth Leon from sgoal.
 # Universidad Nacional de Colombia 
 # published in proceedings of the IEEE World Congress on Computational
 # Intelligence - WCCI 2022
 import random as rand
-from core import SGoal
-from core import permutation
-from binary import flip
-from binary import complement
+from sgoal.core import SGoal
+from sgoal.core import permutation
+from sgoal.binary import flip
+from sgoal.binary import complement
 
   
 ############ GABO: Gene Analysis Bitstring Optimization #############

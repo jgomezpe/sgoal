@@ -3,9 +3,9 @@
 # E-mail: jgomezpe@unal.edu.co
 # All rights reserved.
 # Classical Genetic Algorithms
-from core import SGoal
-from core import randbool
-from core import best
+from sgoal.core import SGoal
+from sgoal.core import randbool
+from sgoal.core import best
 
 ############### Generational Genetic Algorithm - GGA ################
 # problem: Problem to be solved
