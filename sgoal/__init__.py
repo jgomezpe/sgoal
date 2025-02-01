@@ -1,0 +1,1 @@
+from .sgoal import Space
