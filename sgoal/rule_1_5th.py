@@ -5,8 +5,7 @@
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
 # Beyer, Hans-Georg & Schwefel, Hans-Paul. (2002). Evolution strategies - A comprehensive introduction. 
 # Natural Computing. 1. 3-52. 10.1023/A:1015059928466. 
-from sgoal.core import pick
-from sgoal.core import evaluate
+from sgoal import SGoal
 
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
 # Beyer, Hans-Georg & Schwefel, Hans-Paul. (2002). Evolution strategies - A comprehensive introduction. 
@@ -19,24 +18,32 @@ from sgoal.core import evaluate
 # mr: Initial mutation rate
 # x: Initial point
 # fx: f value at point x (if provided)
-def rule_1_5th( f, evals, G, a, mutation, mr, x, fx=None):
-  I=0
-  if(evals>0 and not fx):
-    fx = evaluate(f, x)
-    evals-=1
-    I = 1
-  Gs = 1
-  for i in range(evals):
-    y = mutation(x, mr)
-    fy = evaluate(f,y)
-    w = x
-    x, y, fx, fy = pick( x, y, fx, fy )
-    I += 1
-    if( w==y ): Gs += 1
-    if( I==G ):
-      P = Gs/G
-      if( P > 0.2 ): mr /= a
-      elif( P < 0.2 ): mr *= a
-      Gs = 0
-      I = 0    
-  return x, fx
+class Rule_1_5th(SGoal):
+  def __init__(self, problem, config):
+    SGoal.__init__(self, problem)
+    self.G = config['G']
+    self.a = config['a']
+    self.mr = config['mr']
+    self.mutation = config['mutation']
+    self.I = 0
+    self.Gs = 0
+    
+  def init(self, MAXEVALS, TRACE):
+    self.I = 1 
+    self.Gs = 1
+    return SGoal.init(self, MAXEVALS, TRACE)
+
+  def next(self, P, fP):
+    y = self.mutation(P, self.mr)
+    fy = self.evalone(y)
+    w = P
+    P, fP, y, fy = self.pick( P, fP, y, fy )
+    self.I += 1
+    if( w==y ): self.Gs += 1
+    if( self.I==self.G ):
+      p = self.Gs/self.G
+      if( p > 0.2 ): self.mr /= self.a
+      elif( p < 0.2 ): self.mr *= self.a
+      self.Gs = 0
+      self.I = 0    
+    return P, fP

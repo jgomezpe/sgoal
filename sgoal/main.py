@@ -1,18 +1,88 @@
-#!/usr/bin/env python
+from binary import binaryproblem
+from binary import bitCHAVELA
+from binary import bitR1_5
+from binary import bitGGA
+from binary import bitSSGA
+from binary import DGS1
+from binary import DGSC1
+from binary import RMHC
+from binary import bitmutation
+from hc import HC
+from gabo import GABO
+from gabosfm import GABOFSI
 
-#import sys, os
 
-help = """
-Stochastic Global Optimization Algorithm Library
+#Main program
+D = 120
+problem = binaryproblem('mixed', D)
 
-sgoal
+s = []
+for i in range(30):
+    sgoal = GABOFSI(problem)
+    r = sgoal.run(100*D, True)
+    print(r['groups'])
+    s.append(r['f'])
+#print(r['trace'])
+#print(r['besttrace'])
+    print(i, r['evals'], r['f'])
+#print(r['poptrace'])
+print(sum(s)/len(s))
 
-Shows help only
-"""
+s = []
+for i in range(30):
+    sgoal = GABO(problem)
+    r = sgoal.run(100*D, True)
+    s.append(r['f'])
+#print(r['trace'])
+#print(r['besttrace'])
+    print(i, r['evals'], r['f'])
+#print(r['poptrace'])
+print(sum(s)/len(s))
 
-def main():
-    #infilename = sys.argv[1]
-    #root, ext = os.path.splitext(infilename)
-    
-    # do the real work:
-    print(help)
+def dummu():
+    for i in range(1):
+        sgoal = bitCHAVELA(problem)
+        r = sgoal.run(100*D, True)
+    #print(r['trace'])
+    #print(r['besttrace'])
+        print(i, r['evals'], r['f'])
+    #print(r['poptrace'])
+
+    sgoal = bitR1_5(problem)
+    r = sgoal.run(100*D, True)
+    #print(r['trace'])
+    #print(r['besttrace'])
+    print(r['evals'], r['f'])
+
+    sgoal = HC(problem, bitmutation)
+    r = sgoal.run(100*D, True)
+    #print(r['trace'])
+    #print(r['besttrace'])
+    print(r['evals'], r['f'])
+    sgoal = RMHC(problem)
+    r = sgoal.run(100*D, True)
+    #print(r['trace'])
+    #print(r['besttrace'])
+    print(r['evals'], r['f'])
+    sgoal = DGS1(problem)
+    r = sgoal.run(100*D, True)
+    #print(r['trace'])
+    #print(r['besttrace'])
+    print(r['evals'], r['f'])
+    sgoal = DGSC1(problem)
+    r = sgoal.run(100*D, True)
+    #print(r['trace'])
+    #print(r['besttrace'])
+    print(r['evals'], r['f'])
+    sgoal = bitGGA(problem)
+    r = sgoal.run(100*D, True)
+    #print(r['trace'])
+    #print(r['besttrace'])
+    print(r['evals'], r['f'])
+    #print(r['poptrace'])
+    sgoal = bitSSGA(problem)
+    r = sgoal.run(100*D, True)
+    #print(r['trace'])
+    #print(r['besttrace'])
+    print(r['evals'], r['f'])
+    #print(r['poptrace'])

@@ -23,15 +23,11 @@
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from sgoal.util import normalize
-from sgoal.core import evaluate
-from sgoal.core import evaluate_population
-from sgoal.core import weighted
-from sgoal.core import arity
-from sgoal.core import pick
-from sgoal.core import tournament
-from sgoal.core import strict_pick
-from sgoal.core import tracing
+from sgoal import normalize
+from sgoal import SGoal
+from sgoal import weighted
+from sgoal import arity
+from sgoal import tournament
 import random as rand
 
 #Chavela traced information
@@ -44,6 +40,7 @@ def chavela_trace():
   return FP, RATES
   
 ############ RATES OPERATIONS ############
+
 # Init Rates - individual level (M operators)
 def init_rates(M):
   rate = []
@@ -53,16 +50,7 @@ def init_rates(M):
       rate[i] = rand.random()
   return normalize(rate)
 
-#Init Rates - Population level (A population of N individuals, M operators)
-def init_rates_population(N, M):
-  return [init_rates(M) for i in range(N)]
 
-# Update rates
-def update_rates(h, fc, fp, rate):
-  delta = rand.random()
-  if(strict_pick(fp,fc)): rate[h] *= (1.0+delta)
-  else: rate[h] *= (1.0-delta)
-  return normalize(rate) 
 
 ############ Canonical HAEA: Chavela ##########
 # f: Function to be optimized
@@ -71,41 +59,64 @@ def update_rates(h, fc, fp, rate):
 # P: Initial population
 # fP: Fitness value for each individual of the population, if provided.
 # rates: initial rates
-def CHAVELA( f, evals, operators, P, fP=None, rates=None ):
-  global RATES, FP # Tracing lists
-  N = len(P)
-  if( not fP and evals>=N ): 
-    fP = evaluate_population(f, P)
-    evals -= N
-  if( not rates ):
-    rates = init_rates_population(N,len(operators))
-  if tracing(): 
-    RATES = [rates]
-    FP = [fP]
-  
-  while(evals>=N):
+# problem: Problem to be solved
+# config: GGA parameters
+class CHAVELA(SGoal):
+  def __init__(self, problem, config):
+    SGoal.__init__(self, problem)
+    self.N = config['N']
+    self.operators = config['operators']
+    self.rates = []
+    self.result['rates'] = []
+
+
+  #Init Rates - Population level (A population of N individuals, M operators)
+  def init(self, MAXEVALS, TRACE):
+    P, fP = SGoal.init(self, MAXEVALS, TRACE)
+    M = len(self.operators)
+    self.rates = [init_rates(M) for i in range(self.N)]
+    return P, fP
+
+  def tracing(self, P, fP):
+    SGoal.tracing(self, P, fP)
+    if(self.TRACE):
+      self.result['rates'].append(self.rates)
+
+  # Determines if the fitness of the second individual is better than the fitness of the first one
+  def improves(self, fx, fy):
+    return ((not self.minimize and fy>fx) or (self.minimize and fy<fx))
+
+  # Update rates
+  def update_rates(self, h, fc, fp, rate):
+    delta = rand.random()
+    if(self.improves(fp,fc)): 
+      rate[h] *= (1.0+delta)
+    else: 
+      rate[h] *= (1.0-delta)
+    return normalize(rate)
+    
+  def next(self, P, fP):
     Q = []
     fQ = []
     rQ = []
-    for i in range(N):
+    i = 0
+    while( not self.stop() and i<self.N):
       parents = [P[i]]
-      h = weighted(rates[i])
-      a = arity(operators[h]) 
+      h = weighted(self.rates[i])
+      a = arity(self.operators[h]) 
       if a > 1: 
-        idxparents = tournament(fP,a-1)
+        idxparents = tournament(fP,a-1, self.minimize)
         for k in idxparents:
           parents.append(P[k])     
-        candidates = operators[h](*parents)
+        candidates = self.operators[h](*parents)
         c = candidates[rand.randint(0,len(candidates)-1)]
-      else: c = operators[h](parents[0])     
-      fc = evaluate(f,c)
-      rQ.append(update_rates(h, fc, fP[i], rates[i]))
-      c, p, fc, fp = pick(P[i], c, fP[i], fc)
+      else: 
+        c = self.operators[h](parents[0])     
+      fc = self.evalone(c)
+      rQ.append(self.update_rates(h, fc, fP[i], self.rates[i]))
+      c, fc, p, fp = self.pick(P[i], fP[i], c, fc)
       Q.append(c)
       fQ.append(fc)
-    evals -= N
-    P, fP, rates = Q, fQ, rQ
-    if tracing(): 
-      RATES.append(rates.copy())
-      FP.append(fP)
-  return P, fP, evals, rates
+      i += 1
+    P, fP, self.rates = Q, fQ, rQ
+    return P, fP
