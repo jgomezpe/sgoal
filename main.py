@@ -15,7 +15,7 @@ from sgoal.core import experiment
 R = 10
 D = 120
 EVALS = 100*D
-problem = BitArrayProblem('mixed', D)
+problem = BitArrayProblem('Mixed', D)
 core = [GABO2, GABO, BitArrayHC, RMHC, BitArrayR1_5, GS1, GSC1, BitArrayGGA, BitArraySSGA, BitArrayCHAVELA]
 
 for s in core:
