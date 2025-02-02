@@ -281,14 +281,14 @@ def mixed2(x, start=0, end=-1):
 
 ##################### TEST PROBLEMS ####################
 def BitArrayProblem(f, D):
-  if(f=='maxones'):
+  if(f=='MaxOnes'):
     return {'f':maxones, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
-  if(f=='deceptive'):
+  if(f=='GD3'):
     return {'f':deceptive, 'space': BitArraySpace(D), 'optimum':10*D, 'type':'max'}
-  if(f=='boundedly'):
+  if(f=='GBD4'):
     return {'f':boundedly, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
-  if(f=='royalroad8'):
+  if(f=='RR1'):
     return {'f':royalroad8, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
-  if(f=='mixed'):
+  if(f=='Mixed'):
     return {'f':mixed, 'space': BitArraySpace(D), 'optimum':47*D/20, 'type':'max'}
   return {'f':maxones, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
