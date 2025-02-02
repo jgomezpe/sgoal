@@ -134,10 +134,11 @@ class SGoal:
     if('x' not in self.result):
       self.result['x'] = x
       self.result['f'] = fx
+      self.result['evals'] = 1
     else:
       self.result['x'], self.result['f'], b, fb = self.pick(x, fx, self.result['x'], self.result['f'])
-    if(fx==self.optimum):
-      self.result['evals'] = self.count
+      if(x == self.result['x'] and fx != fb):
+        self.result['evals'] = self.count
     if(self.TRACE):
       self.trace.append(fx)
       self.besttrace.append(self.result['f'])
