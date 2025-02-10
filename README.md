@@ -1,5 +1,5 @@
 # sgoal
-A global optimization problem is formulated in terms of finding a point x in a subset Ω ⊆ Φ where a certain function f : Φ → R, attains is best/optimal value (minimum or maximum) [1]. In the optimization field, Ω, Φ, and f are called the feasible region, the solution space, and the objective function, respectively. The optimal value for the objective function (denoted as f ∗ ∈ R) is
+A global optimization problem is formulated in terms of finding a point x in a subset Ω ⊆ Φ where a certain function f : Φ → R, attains is best/optimal value (minimum or maximum). In the optimization field, Ω, Φ, and f are called the feasible region, the solution space, and the objective function, respectively. The optimal value for the objective function (denoted as f ∗ ∈ R) is
 suppose to exist and it is unique (R is a total order).
 
 A Stochastic Global Optimization ALgorithm (SGoal) is an iterative algorithm that generates a new candidate set of solutions (called population) from a given population using a stochastic operation 
