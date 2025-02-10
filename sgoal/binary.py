@@ -1,60 +1,58 @@
+# Binary (BitArray) search space definitions
 # Copyright (c)
-# Author: Jonatan Gomez 
-# E-mail: jgomezpe@unal.edu.co
+# Authors: Jonatan Gomez and Elizabeth León  
+# E-mails: jgomezpe@unal.edu.co  and eleonguz@unal.edu.co
 # All rights reserved.
-# Binary search space definitions
+# Licence
+# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+# Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+# Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer 
+# in the documentation and/or other materials provided with the distribution.
+# Neither the name of the copyright owners, their employers, nor the names of its contributors may be used to endorse or 
+# promote products derived from sgoal.this software without specific prior written permission.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
+# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT OWNERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import random as rand
-from sgoal.core import Space, transposition
-from sgoal.core import SGoal
-from sgoal.core import tournament
-from sgoal.core import simplexover
+from sgoal.core import Space
 from sgoal.core import randbool
-from sgoal.hc import HC
-from sgoal.ga import GGA
-from sgoal.ga import SSGA
-from sgoal.chavela import CHAVELA
-from sgoal.rule_1_5th import Rule_1_5th
 
-# BitArray Space
+# Fixed Length BitArray Space
+# D : Length of the BitArray
 class BitArraySpace(Space):
   def __init__(self, D):
     self.D = D
 
+  # Produces one random BitArray of length D
   def getone(self):
     return [1 if randbool() else 0 for i in range(self.D)]
-  
-############### USEFUL FUNCTIONS ################
-
-# For all logic operator tested on an array of boolean values
-def for_all(a):
-  for v in a:
-    if(not v):
-      return False
-  return True
-
+ 
 ############### VARIATION OPERATIONS ################
-# Flips the kth bit of a genome (creates a new genome)
+# Flips the kth bit of BitArray x (creates a new one - hard copy)
 def flip(x, k):
   y = x.copy()
   y[k] = 1 if y[k]==0 else 0
   return y
 
-# Generates the complement bitstring (creates a new genome)
+# Generates the complement bitstring (creates a new one - hard copy)
 def complement(x): return [1 if v==0 else 0 for v in x]
 
-# Single bit mutation (creates a copy with a bit randomly flipped)
+# Single bit mutation: Flips a single bit chosen in a random fashion (creates a new one - hard copy)
 def singlebitmutation(x):
   return flip(x, rand.randint(0,len(x)-1))
 
-# Multiple bit mutation
+# Multiple bits mutation: Flips the set of bits in the indices array k (creates a new one - hard copy)
 def multiflip(x, k):
   y = x.copy()
   for i in k:
     y[i] = 1 if y[i]==0 else 0
   return y
 
-# Bit mutation. Flips a bit with probability p
+# Bit mutation. Flips each bit with probability p (creates a new one - hard copy)
 def bitmutationprob(x, p):
   y = x.copy()
   for i in range(len(y)):
@@ -62,122 +60,13 @@ def bitmutationprob(x, p):
       y[i] = 1 - y[i]
   return y
 
-# Bit mutation. Flips a bit with probability 1/|x|
+# Bit mutation. Flips a bit with probability 1/|x| (creates a new one - hard copy)
 def bitmutation(x): return bitmutationprob(x, 1.0/len(x))
 
 
-#################### CLASSIC LITERATURE ALGORITHMS #####################
-def BitArrayHC(problem): return HC(problem, bitmutation)
-
-# The HC algorithm suggested by Richard Palmer, that Forrest and
-# Mitchell named as "random mutation hill-climbing" (RMHC), see
-# M. Mitchell and J. Holland, “When will a genetic algorithm outperform hill-climbing?”
-# Santa Fe Institute, Working Papers, 01 1993.
-# problem: Problem to be solved
-def RMHC(problem): return HC(problem, singlebitmutation)
-
-
-# A Generalization of The Global Search Algorithm for GA-easy functions 
-# propossed by Das and Whitley 1991, which tries only order 1-schemas, see
-# R. Das and L. D. Whitley, “The only challenging problems are deceptive: 
-# Global search by solving order-1 hyperplanes,
-# in Proceedings of the 4th International Conference on Genetic Algorithms, San Diego, CA, USA,
-# July 1991 (R. K. Belew and L. B. Booker, eds.), pp. 166– 173, Morgan Kaufmann, 1991.
-# Our generalization allows to check a good 1-schema after some CHECK evaluations
-# instead of checing it at the end of the allowed number of fitness evaluations
-# f: Function to be optimized
-class GGS1(SGoal):
-  def __init__(self, problem, CHECK):
-    SGoal.__init__(self, problem)
-    self.S1 = []
-    self.fS1 = []
-    self.N = 1
-    self.check = CHECK
-    self.delta = 1
-
-  def evalone(self, x):
-    fx = SGoal.evalone(self, x)
-    self.S1.append(x)
-    self.fS1.append(fx)
-    return fx
-
-  def next(self, P, fP):
-    if(self.check == -1): 
-      self.check = self.evals
-    if((self.count+self.delta)%self.check != 0):
-      y = self.space.get(1)
-      return y, self.evalone(y)
-
-# Computes schemata information
-    M = len(self.S1)
-    D = self.space.D
-    C = [[0 for k in range(D)], [0 for k in range(D)]]
-    fH = [[0 for k in range(D)], [0 for k in range(D)]]
-    for k in range(D):
-      for i in range(M):
-        fH[self.S1[i][k]][k] += self.fS1[i]
-        C[self.S1[i][k]][k] += 1
-    # Generates a candidate solution with the best genes
-    y = []
-    for k in range(D):
-      if( self.minimize ):
-        y.append( 1 if(fH[1][k]/C[1][k] < fH[0][k]/C[0][k]) else 0 )
-      else:
-        y.append( 1 if(fH[1][k]/C[1][k] > fH[0][k]/C[0][k]) else 0 )
-    fy = SGoal.evalone(self, y)
-    return y, fy
-
-def GS1(problem): return GGS1(problem, -1)
-
-def DGS1(problem): return GGS1(problem, problem['space'].D)
-
-
-# A Generalization of The Global Search Algorithm with complement propossed by 
-# G. Venturini 1995
-# Applies the GS1 and compares the obtained solution with its complement and the
-# best candidate solution of the S1 set (same as the best solution found), see
-# G. Venturini, “Ga consistently deceptive functions are not challenging problems”
-# in First International Conference on Genetic Algorithms in Engineering Systems: 
-# Innovations and Applications, pp. 357–364, 1995.
-# Our generalization checks the complement after some fitness evaluations
-# f: Function to be optimized
-# evals: Maximum number of fitness evaluations
-# x: Initial point, a random point. It is required for defining the dimension of the space
-# fx: f value at point x (if provided)
-class GGSC1(GGS1):
-  def __init__(self, problem, CHECK):
-    GGS1.__init__(self, problem, CHECK)
-    self.delta = 2
-
-  def next(self, P, fP):
-    y, fy = GGS1.next(self, P, fP)
-    if((self.count+1)%self.check == 0):
-      y = complement(self.result['x'])
-      fy = SGoal.evalone(self, y)
-    return y, fy
-
-def GSC1(problem): return GGSC1(problem, -1)
-
-def DGSC1(problem): return GGSC1(problem, problem['space'].D)
-
-def BitArrayGAconfig(D):
-  return {'selection': tournament, 'xover': simplexover, 'xr':0.7, 'mutation':bitmutation, 'N':D//2}
-  
-def BitArrayGGA(problem):
-  return GGA(problem, BitArrayGAconfig(problem['space'].D))
-
-def BitArraySSGA(problem):
-  return SSGA(problem, BitArrayGAconfig(problem['space'].D))
-
-def BitArrayCHAVELA(problem):
-  return CHAVELA(problem, {'operators':[bitmutation, simplexover, transposition], 'N':problem['space'].D//2}) 
-
-def BitArrayR1_5(problem):
-  D = problem['space'].D
-  return Rule_1_5th(problem, {'mr':1/D, 'mutation': bitmutationprob, 'G':D, 'a':0.9}) 
-
 ##################### TEST FUNCTIONS #####################
-# MaxOnes function
+# Computing the MaxOnes function (sum of bits) from the start bit upto end-1 bit. 
+# Sums bits up to the end of the BitArray if end is set to -1
 def maxones(x, start=0, end=-1):
   if(end<0): 
     end = len(x)
@@ -186,10 +75,10 @@ def maxones(x, start=0, end=-1):
     s += x[i]
   return s
 
-def twopowermaxones(x, start=0, end=-1):
-  return abs(2**maxones(x, start, end)-16)
-
-# Goldberg's 3-Deceptive function
+# Goldberg's 3-Deceptive function, as defined in 
+# D. Goldberg, B. Korb, and K. Deb, “Messy genetic algorithms: 
+# motivation, analysis, and first results,” 
+# Complex Systems, vol. 3, pp. 493–530, 1989.
 def deceptive(x, start=0, end=-1):
   if(end<0): 
     end = len(x)
@@ -216,7 +105,10 @@ def deceptive(x, start=0, end=-1):
     i += size  
   return c
 
-# Goldberg's Boundedly-Deceptive function
+# Goldberg's Boundedly-Deceptive function, as defined in 
+# D. Goldberg, B. Korb, and K. Deb, “Messy genetic algorithms: 
+# motivation, analysis, and first results,” 
+# Complex Systems, vol. 3, pp. 493–530, 1989.
 def generic_boundedly(x, size, start=0, end=-1):
   if(end<0): 
     end = len(x)
@@ -232,7 +124,11 @@ def generic_boundedly(x, size, start=0, end=-1):
 
 def boundedly(x, start=0, end=-1): return generic_boundedly(x,4,start,end)
 
-# Forrest's Royal Road function
+# Forrest's Royal Road function as defined in
+# M. Mitchell, S. Forrest, and J. Holland, “The royalroad 
+# for genetic algorithms: Fitness landscapes and ga performance,” 
+# in Toward a Practice of Autonomous Systems: 
+# Proceedings of the First European Conference on Artificial Life, 11 1992.
 def generic_royalroad(x, size, start=0, end=-1):
   if(end<0): 
     end = len(x)
@@ -250,6 +146,9 @@ def royalroad8(x,start=0,end=-1): return generic_royalroad(x,8,start,end)
 
 def royalroad16(x,start=0,end=-1): return generic_royalroad(x,16,start,end)
 
+# The mixed function as defined in 
+# J. Gomez and E. Leon, "Gabo: Gene Analysis Bitstring Optimization," 
+# 2022 IEEE Congress on Evolutionary Computation (CEC), Padua, Italy, 2022, pp. 1-8, doi: 10.1109/CEC55065.2022.9870237.
 # A combination of all the previous bit functions, each block of 20 bits is defined as follow
 # 0..4 : maxones
 # 5..7 : deceptive3
@@ -264,20 +163,6 @@ def mixed(x, start=0, end=-1):
     start += 20
   return f 
 
-  # A combination of all the previous bit functions, each block of 20 bits is defined as follow
-# 0..4 : twopowermaxones
-# 5..7 : deceptive3
-# 8..11 : boundedly
-# 12..19 : royalroad8
-# 20..24 : twopowermaxones
-def mixed2(x, start=0, end=-1):
-  if(end==-1): 
-    end = len(x)
-  f = 0
-  while(start<end):
-    f += twopowermaxones(x,start,start+5) + deceptive(x,start+5,start+8) + boundedly(x,start+8,start+12) + royalroad8(x,start+12,start+20) 
-    start += 20
-  return f 
 
 ##################### TEST PROBLEMS ####################
 def BitArrayProblem(f, D):
@@ -285,10 +170,12 @@ def BitArrayProblem(f, D):
     return {'f':maxones, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
   if(f=='GD3'):
     return {'f':deceptive, 'space': BitArraySpace(D), 'optimum':10*D, 'type':'max'}
-  if(f=='GBD4'):
+  if(f=='GD4'):
     return {'f':boundedly, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
   if(f=='RR1'):
     return {'f':royalroad8, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
+  if(f=='RR2'):
+    return {'f':royalroad16, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
   if(f=='Mixed'):
     return {'f':mixed, 'space': BitArraySpace(D), 'optimum':47*D/20, 'type':'max'}
   return {'f':maxones, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}

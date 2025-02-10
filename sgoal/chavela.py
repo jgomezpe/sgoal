@@ -1,7 +1,3 @@
-# Copyright (c)
-# Authors: Jonatan Gomez and Elizabeth León  
-# E-mails: jgomezpe@unal.edu.co  and eleonguz@unal.edu.co
-# All rights reserved.
 # The Cannonical Hybrid Adaptive Evolutionary Algorithm as proposed by
 # Jonatan Gómez and Elizabeth León in: 
 # "On the class of hybrid adaptive evolutionary algorithms (chavela)"
@@ -9,6 +5,10 @@
 # Electronic ISSN: 1572-9796, DOI
 # https://doi.org/10.1007/s11047-021-09843-5# Publication date 26-02-2021
 # Publisher Springer Netherlands
+# Copyright (c)
+# Authors: Jonatan Gomez and Elizabeth León  
+# E-mails: jgomezpe@unal.edu.co  and eleonguz@unal.edu.co
+# All rights reserved.
 # Licence
 # Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 # Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
@@ -23,26 +23,24 @@
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from sgoal.core import normalize
 from sgoal.core import SGoal
+from sgoal.core import normalize
+from sgoal.core import transposition
 from sgoal.core import weighted
 from sgoal.core import arity
 from sgoal.core import tournament
+from sgoal.core import basicInitPop
+from sgoal.core import basicStop
+from sgoal.core import tournament
+from sgoal.core import simplexover
+from sgoal.binary import bitmutation
+
 import random as rand
-
-#Chavela traced information
-RATES = [] # Tracing the evolution of rates
-FP = [] # Tracing the population's fitness evolution
-
-# Gets the chavela's traced information
-def chavela_trace():
-  global RATES,FP
-  return FP, RATES
   
 ############ RATES OPERATIONS ############
 
-# Init Rates - individual level (M operators)
-def init_rates(M):
+# Init Rates for an individual (M operators)
+def initRates(M):
   rate = []
   for i in range(0,M):
     rate.append(rand.random())
@@ -50,33 +48,62 @@ def init_rates(M):
       rate[i] = rand.random()
   return normalize(rate)
 
+# CHAVELA Inits Population: Generates a population (N individuals) following an inner 
+# population generation process (by default the space population generation)
+# and associates operator rates to each individual (M operators)
+def initPopCHAVELA(sgoal):
+  P, fP = sgoal.innerInit(sgoal)
+  M = len(sgoal.operators)
+  sgoal.rates = [initRates(M) for i in range(sgoal.N)]
+  return P, fP
 
+# CHAVELA next population method
+def nextPopCHAVELA(P, fP, sgoal):
+  Q = []
+  fQ = []
+  rQ = []
+  for i in range(sgoal.N):
+    if(sgoal.caneval()):
+      parents = [P[i]]
+      h = weighted(sgoal.rates[i])
+      a = arity(sgoal.operators[h]) 
+      if a > 1: 
+        idxparents = tournament(fP,a-1, sgoal.minimize)
+        for k in idxparents:
+          parents.append(P[k])     
+        candidates = sgoal.operators[h](*parents)
+        c = candidates[rand.randint(0,len(candidates)-1)]
+      else: 
+        c = sgoal.operators[h](parents[0])     
+      fc = sgoal.evalone(c)
+      rQ.append(sgoal.updateRates(h, fc, fP[i], sgoal.rates[i]))
+      c, fc, p, fp = sgoal.pick(P[i], fP[i], c, fc)
+      Q.append(c)
+      fQ.append(fc)
+    else:
+      Q.append(P[i])
+      fQ.append(fP[i])
+      rQ.append(sgoal.rates[i])
+  P, fP, sgoal.rates = Q, fQ, rQ
+  return P, fP
 
 ############ Canonical HAEA: Chavela ##########
-# f: Function to be optimized
-# evals: Maximum number of fitness evaluations
-# operators: Genetic operators
-# P: Initial population
-# fP: Fitness value for each individual of the population, if provided.
-# rates: initial rates
-# problem: Problem to be solved
-# config: GGA parameters
+# problem: Problem to solve
+# config: CHAVELA parameters
+#   N: Number of individuals
+#   operators: A list with the variation operators used by CHAVELA 
+# initPop: Process for generting the initial population (by default uses the BitArraySpace generation method)
+# stop: Stopping criteria (by default uses the basic stopping criteria)
 class CHAVELA(SGoal):
-  def __init__(self, problem, config):
-    SGoal.__init__(self, problem)
+  def __init__(self, problem, config, initPop=basicInitPop, stop=basicStop):
+    SGoal.__init__(self, problem, nextPopCHAVELA, initPopCHAVELA, stop)
     self.N = config['N']
     self.operators = config['operators']
     self.rates = []
     self.result['rates'] = []
+    self.innerInit = initPop
 
-
-  #Init Rates - Population level (A population of N individuals, M operators)
-  def init(self, MAXEVALS, TRACE):
-    P, fP = SGoal.init(self, MAXEVALS, TRACE)
-    M = len(self.operators)
-    self.rates = [init_rates(M) for i in range(self.N)]
-    return P, fP
-
+  # Trace method. Adds rates evolution to the tracing object
   def tracing(self, P, fP):
     SGoal.tracing(self, P, fP)
     if(self.TRACE):
@@ -87,7 +114,7 @@ class CHAVELA(SGoal):
     return ((not self.minimize and fy>fx) or (self.minimize and fy<fx))
 
   # Update rates
-  def update_rates(self, h, fc, fp, rate):
+  def updateRates(self, h, fc, fp, rate):
     delta = rand.random()
     if(self.improves(fp,fc)): 
       rate[h] *= (1.0+delta)
@@ -95,31 +122,6 @@ class CHAVELA(SGoal):
       rate[h] *= (1.0-delta)
     return normalize(rate)
     
-  def next(self, P, fP):
-    Q = []
-    fQ = []
-    rQ = []
-    for i in range(self.N):
-      if(self.caneval()):
-        parents = [P[i]]
-        h = weighted(self.rates[i])
-        a = arity(self.operators[h]) 
-        if a > 1: 
-          idxparents = tournament(fP,a-1, self.minimize)
-          for k in idxparents:
-            parents.append(P[k])     
-          candidates = self.operators[h](*parents)
-          c = candidates[rand.randint(0,len(candidates)-1)]
-        else: 
-          c = self.operators[h](parents[0])     
-        fc = self.evalone(c)
-        rQ.append(self.update_rates(h, fc, fP[i], self.rates[i]))
-        c, fc, p, fp = self.pick(P[i], fP[i], c, fc)
-        Q.append(c)
-        fQ.append(fc)
-      else:
-        Q.append(P[i])
-        fQ.append(fP[i])
-        rQ.append(self.rates[i])
-    P, fP, self.rates = Q, fQ, rQ
-    return P, fP
+
+def BitArrayCHAVELA(problem):
+  return CHAVELA(problem, {'operators':[bitmutation, simplexover, transposition], 'N':problem['space'].D//2}) 
