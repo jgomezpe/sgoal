@@ -5,7 +5,9 @@
 # in Proceedings of the 4th International Conference on Genetic Algorithms, San Diego, CA, USA,
 # July 1991 (R. K. Belew and L. B. Booker, eds.), pp. 166– 173, Morgan Kaufmann, 1991
 # 2. A Generalization of The Global Search Algorithm with complement propossed by 
-# G. Venturini 1995
+# G. Venturini 1995  in “Ga consistently deceptive functions are not challenging problems” in 
+# First International Conference on Genetic Algorithms in Engineering Systems: 
+# Innovations and Applications, pp. 357–364, 1995.
 # Copyright (c)
 # Authors: Jonatan Gomez and Elizabeth León  
 # E-mails: jgomezpe@unal.edu.co and eleonguz@unal.edu.co
