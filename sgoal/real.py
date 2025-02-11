@@ -60,6 +60,10 @@ def gaussianMutation( x, sigma, space ):
 def lambdaGaussianMutation(sigma, space):
    return lambda x: gaussianMutation(x, sigma, space)
 
+# A lambda version for using in SGoals requiring one argument variations
+def lambdaOneGaussianMutation(space):
+   return lambda x, sigma: gaussianMutation(x, sigma, space)
+
 # Powerlaw Mutation
 def powerlawMutation( x, space ):
   if( isinstance(x, list) ):

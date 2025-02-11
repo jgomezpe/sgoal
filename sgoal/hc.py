@@ -22,6 +22,7 @@ from sgoal.core import basicInitPop
 from sgoal.core import basicStop
 from sgoal.binary import bitmutation
 from sgoal.binary import singlebitmutation
+from sgoal.real import lambdaGaussianMutation
 
 # Next individual of the Hill Climbing Algorithm (nextPop in terms of SGoal)
 def nextHC(P, fP, sgoal):
@@ -43,6 +44,11 @@ class HC(SGoal):
 # Classical Hill Climbing Algorithm for BitArray problems. Uses bitmutation as variation operator
 # problem: Problem to solve
 def BitArrayHC(problem): return HC(problem, bitmutation)
+
+# Classical Hill Climbing Algorithm for Real problems. Uses Gaussian mutation with sigma=0.2 as variation operator
+# problem: Problem to solve
+def RealHC(problem): return HC(problem, lambdaGaussianMutation(0.2, problem['space']))
+
 
 # The HC algorithm suggested by Richard Palmer, that Forrest and
 # Mitchell named as "random mutation hill-climbing" (RMHC), see
