@@ -34,6 +34,8 @@ from sgoal.core import basicStop
 from sgoal.core import tournament
 from sgoal.core import simplexover
 from sgoal.binary import bitmutation
+from sgoal.real import lambdaGaussianMutation
+from sgoal.real import lambdaPowerlawMutation
 
 import random as rand
   
@@ -122,6 +124,21 @@ class CHAVELA(SGoal):
       rate[h] *= (1.0-delta)
     return normalize(rate)
     
+# Standard CHAVELA for BitArray problems
+# problem: BitArray problem to solve
+# N: Population's size. If N<0 then the population's size is set to D//2, with D the length of BitArray
+def BitArrayCHAVELA(problem, N = -1):
+  if(N<0): N = problem['space'].D//2
+  return CHAVELA(problem, {'operators':[bitmutation, simplexover, transposition], 'N':N}) 
 
-def BitArrayCHAVELA(problem):
-  return CHAVELA(problem, {'operators':[bitmutation, simplexover, transposition], 'N':problem['space'].D//2}) 
+# Standard CHAVELA for Real problems
+# problem: Real problem to solve
+# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
+def RealCHAVELA(problem, N=-1):
+  space = problem['space']
+  if(isinstance(space.min, list)): 
+    D = len(space.min)
+  else:
+    D = 1
+  if(N<0): N = max(D//2,100)
+  return CHAVELA(problem, {'operators':[lambdaGaussianMutation(0.2,space), transposition, simplexover], 'N':N })

@@ -122,6 +122,10 @@ class Space:
   def getone(self):
     return []
 
+  # Determines if a candidate solution is feasible
+  def feasible(self, x):
+    return True
+
   # Gets N points in the search space
   def get(self, N):
     if(N==1):

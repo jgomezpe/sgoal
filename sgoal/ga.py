@@ -26,6 +26,7 @@ from sgoal.core import basicStop
 from sgoal.core import tournament
 from sgoal.core import simplexover
 from sgoal.binary import bitmutation
+from sgoal.real import lambdaGaussianMutation
 
 ############### Genetic Algorithm - GA ################
 # problem: Problem to solve
@@ -124,16 +125,44 @@ def SSGA(problem, config, initPop=basicInitPop, stop=basicStop):
 #   xover: simple crossover
 #   xr; Crossover rate set to 0.7
 #   mutation: bitmutation
-#   N: Population's size set to half of the BitArray length D
-def BitArrayGAconfig(D):
-  return {'selection': tournament, 'xover': simplexover, 'xr':0.7, 'mutation':bitmutation, 'N':D//2}
+#   N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the bitarray length
+def BitArrayGAconfig(D, N=-1):
+  if(N<0): N = max(D//2,100)
+  return {'selection': tournament, 'xover': simplexover, 'xr':0.7, 'mutation':bitmutation, 'N':N}
   
 ############### Generational Genetic Algorithm - SSGA ################
 # problem: Problem to solve
-def BitArrayGGA(problem):
-  return GGA(problem, BitArrayGAconfig(problem['space'].D))
+# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
+def BitArrayGGA(problem, N=-1):
+  return GGA(problem, BitArrayGAconfig(problem['space'].D, N))
 
 ############### Steady State Genetic Algorithm - SSGA ################
 # problem: Problem to solve
-def BitArraySSGA(problem):
-  return SSGA(problem, BitArrayGAconfig(problem['space'].D))
+# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
+def BitArraySSGA(problem, N=-1):
+  return SSGA(problem, BitArrayGAconfig(problem['space'].D, N))
+
+
+############# Real versions ##############
+# Basic Genetic Algorithm configuration for real encoding
+#   selection: tournament selection
+#   xover: simple crossover
+#   xr; Crossover rate set to 0.7
+#   mutation: gaussian mutation with sigma=0.2
+#   N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
+def RealGAconfig(space, N=-1):
+  D = len(space.min) if isinstance(space.min, list) else 1
+  if(N<0): N = max(D//2,100)
+  return {'selection': tournament, 'xover': simplexover, 'xr':0.7, 'mutation':lambdaGaussianMutation(0.2, space), 'N':N}
+  
+############### Generational Genetic Algorithm - SSGA ################
+# problem: Problem to solve
+# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
+def RealGGA(problem, N=-1):
+  return GGA(problem, RealGAconfig(problem['space'], N))
+
+############### Steady State Genetic Algorithm - SSGA ################
+# problem: Problem to solve
+# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
+def RealSSGA(problem, N=-1):
+  return SSGA(problem, RealGAconfig(problem['space'], N))
