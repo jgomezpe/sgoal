@@ -22,18 +22,9 @@ from sgoal.core import SGoal
 from sgoal.core import basicInitPop
 from sgoal.core import basicStop
 from sgoal.binary import bitmutationprob
+from sgoal.real import lambdaOneGaussianMutation
 
-# 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
-# Beyer, Hans-Georg & Schwefel, Hans-Paul. (2002). Evolution strategies - A comprehensive introduction. 
-# Natural Computing. 1. 3-52. 10.1023/A:1015059928466. 
-# f: Function to be optimized
-# evals: Maximum number of fitness evaluations
-# G: Checking evaluations for adapting the mutation rate
-# a: Scaling factor of the mutation rate
-# mutation: A mutation operation with the possibility of setting its rate
-# mr: Initial mutation rate
-# x: Initial point
-# fx: f value at point x (if provided)
+# Next popuation methof of a 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule
 def nextPopR1_5(P, fP, sgoal):
   y = sgoal.mutation(P, sgoal.mr)
   fy = sgoal.evalone(y)
@@ -49,6 +40,15 @@ def nextPopR1_5(P, fP, sgoal):
     sgoal.I = 0    
   return P, fP
 
+# 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
+# Beyer, Hans-Georg & Schwefel, Hans-Paul. (2002). Evolution strategies - A comprehensive introduction. 
+# Natural Computing. 1. 3-52. 10.1023/A:1015059928466. 
+# problem: Problem to solve
+# config: Rule 1/5th parameters
+#   G: Checking evaluations for adapting the mutation rate
+#   a: Scaling factor of the mutation rate
+#   mutation: A mutation operation with the possibility of setting its rate
+#   mr: Initial mutation rate
 class Rule_1_5th(SGoal):
   def __init__(self, problem, config, initPop=basicInitPop, stop=basicStop):
     SGoal.__init__(self, problem, nextPopR1_5, initPop, stop)
@@ -59,9 +59,19 @@ class Rule_1_5th(SGoal):
     self.I = 1
     self.Gs = 1
 
+# 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, for BitArray
+# problem: Problem to solve
 def BitArrayR1_5(problem):
   D = problem['space'].D
   return Rule_1_5th(problem, {'mr':1/D, 'mutation': bitmutationprob, 'G':D, 'a':0.9}) 
+
+# 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations (Gaussian Mutation sigma=0.2) and 1/5th rule, for real
+# problem: Problem to solve
+def RealR1_5(problem):
+  space = problem['space']
+  D = len(space.min) if isinstance(space.min, list) else 1
+  return Rule_1_5th(problem, {'mr':1/D, 'mutation': lambdaOneGaussianMutation(space), 'G':D, 'a':0.9}) 
+
 
 
 #def es(f, evals, mutation, marriage, mutation_s, marriage_s, _mu, _lambda, plus, _rho, P, fP=None):
