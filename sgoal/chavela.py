@@ -128,7 +128,7 @@ class CHAVELA(SGoal):
 # problem: BitArray problem to solve
 # N: Population's size. If N<0 then the population's size is set to D//2, with D the length of BitArray
 def BitArrayCHAVELA(problem, N = -1):
-  if(N<0): N = problem['space'].D//2
+  if(N<0): N = max(problem['space'].D//2, 100)
   return CHAVELA(problem, {'operators':[bitmutation, simplexover, transposition], 'N':N}) 
 
 # Standard CHAVELA for Real problems
