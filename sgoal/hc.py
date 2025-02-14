@@ -23,6 +23,7 @@ from sgoal.core import basicStop
 from sgoal.binary import bitmutation
 from sgoal.binary import singlebitmutation
 from sgoal.real import lambdaGaussianMutation
+from sgoal.gabo import initPopGABO2
 
 # Next individual of the Hill Climbing Algorithm (nextPop in terms of SGoal)
 def nextHC(P, fP, sgoal):
@@ -56,3 +57,6 @@ def RealHC(problem): return HC(problem, lambdaGaussianMutation(0.2, problem['spa
 # Santa Fe Institute, Working Papers, 01 1993.
 # problem: Problem to solve
 def RMHC(problem): return HC(problem, singlebitmutation)
+
+
+def RMHC_G(problem): return HC(problem, singlebitmutation, initPopGABO2)
