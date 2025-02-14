@@ -161,7 +161,6 @@ def basicStop(sgoal):
 
 # Basic population initialization
 def basicInitPop(sgoal):
-  sgoal.count = 0
   P = sgoal.space.get(sgoal.N)
   fP = sgoal.eval(P)
   sgoal.tracing(P,fP)

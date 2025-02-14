@@ -240,12 +240,9 @@ def initPopGABO2(sgoal):
   sgoal.coding.sort()
   sgoal.intron.sort()
   sep, nonsep = analize(sgoal)
-  print('sep:', sep)
-  print('nonsep:', nonsep)
-  for i in range(len(sgoal.candidate[7])):
-    for k in sgoal.candidate[7][i]:
-      print(k, sep='', end='')
-    print(' ', sgoal.contribution[7][i])
+  #print('sep:', sep)
+  #print('nonsep:', nonsep)
+  #print('intron:', sgoal.intron)
   return x, fx
 
 def GABO2Stop(sgoal):
@@ -255,3 +252,19 @@ def GABO2Stop(sgoal):
 # problem: Problem to solve
 def GABO2(problem):
   return SGoal(problem, IOSA, initPopGABO2, GABO2Stop)
+
+# GABO2x Algorithm
+# problem: Problem to solve
+def GABO2x(problem):
+  return SGoal(problem, IOSA, initPopGABO2, lambda x : True)
+
+def initPopGABO2N(sgoal):
+  N = sgoal.N
+  sgoal.N = 1
+  x, fx = initPopGABO2(sgoal)
+  sgoal.N = N - 1 
+  P, fP = basicInitPop(sgoal)
+  P.append(x)
+  fP.append(fx)
+  sgoal.N = N
+  return P, fP

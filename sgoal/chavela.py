@@ -35,7 +35,7 @@ from sgoal.core import tournament
 from sgoal.core import simplexover
 from sgoal.binary import bitmutation
 from sgoal.real import lambdaGaussianMutation
-from sgoal.real import lambdaPowerlawMutation
+from sgoal.gabo import initPopGABO2N
 
 import random as rand
   
@@ -128,7 +128,7 @@ class CHAVELA(SGoal):
 # problem: BitArray problem to solve
 # N: Population's size. If N<0 then the population's size is set to D//2, with D the length of BitArray
 def BitArrayCHAVELA(problem, N = -1):
-  if(N<0): N = max(problem['space'].D//2, 100)
+  if(N<0): N = max(100,problem['space'].D//2)
   return CHAVELA(problem, {'operators':[bitmutation, simplexover, transposition], 'N':N}) 
 
 # Standard CHAVELA for Real problems
@@ -142,3 +142,7 @@ def RealCHAVELA(problem, N=-1):
     D = 1
   if(N<0): N = max(D//2,100)
   return CHAVELA(problem, {'operators':[lambdaGaussianMutation(0.2,space), transposition, simplexover], 'N':N })
+
+def CHAVELA_G(problem, N=-1):
+  if(N<0): N = max(100,problem['space'].D//2)
+  return CHAVELA(problem, {'operators':[bitmutation, simplexover, transposition], 'N':N}, initPopGABO2N) 
