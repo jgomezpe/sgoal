@@ -248,7 +248,10 @@ def initPopGABO2(sgoal):
     print(' ', sgoal.contribution[7][i])
   return x, fx
 
+def GABO2Stop(sgoal):
+  return basicStop(sgoal) or len(sgoal.intron)==0
+
 # GABO2 Algorithm
 # problem: Problem to solve
 def GABO2(problem):
-  return SGoal(problem, IOSA, initPopGABO2, basicStop)
+  return SGoal(problem, IOSA, initPopGABO2, GABO2Stop)
