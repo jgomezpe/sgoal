@@ -239,7 +239,7 @@ def initPopGABO2(sgoal):
   x, fx, y, fy = sgoal.pick(x, fx, y, fy)
   sgoal.coding.sort()
   sgoal.intron.sort()
-  sep, nonsep = analize(sgoal)
+  #sep, nonsep = analize(sgoal)
   #print('sep:', sep)
   #print('nonsep:', nonsep)
   #print('intron:', sgoal.intron)
