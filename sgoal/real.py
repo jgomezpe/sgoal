@@ -23,6 +23,7 @@ from sgoal.core import randbool
 from sgoal.core import SPACE
 from sgoal.core import PROBLEM
 from sgoal.core import simplegetN
+from sgoal.binary import Binary
 
 # Checks if a real value x is in the interval [min,max]
 def feasibleR(min, max, x):
@@ -58,6 +59,8 @@ def RealSpace(min, max, D=0):
     g = lambda: getR(min, length)
     space = SPACE(g, lambda N: simplegetN(N,g), lambda x: feasibleR(min, max, x))
     space['D'] = 1
+  space['RSMIN'] = min
+  space['RSLENGTH'] = length
   return space
 
 # Gaussian number generation
@@ -94,6 +97,42 @@ def gaussianMutation(sgoal):
   if( D==1 ): return lambda x: gaussianMutationR(x, 0.2, sgoal['feasible'])
   return lambda x: gaussianMutationRn(x, 0.2, sgoal['feasible'])
 
+
+##################### REAL TO BINARY #####################
+# Grows a binary representation to real vector representation
+def grow1(x, min, length, SIZE, i=0):
+  s = 0
+  p = 1
+  start = i*SIZE
+  for k in range(start, start+SIZE):
+    if( x[k] == 1):
+      s += p
+    p *= 2
+  return min + (s/p)*length
+
+def grow(x, min, length, SIZE=16):
+  return [grow1(x, min[i], length[i], SIZE, i) for i in range(len(x)//SIZE)]
+
+def Real2Binary(min, max, D=0, BITSIZE=32):
+  if(D>1):
+    min = [min for i in range(D)]
+    max = [max for i in range(D)]
+    D *= BITSIZE
+  else:
+    D = BITSIZE
+  space = Binary(D)
+  if(isinstance(min , list)):
+    length = [max[i]-min[i] for i in range(len(min))]
+    space['feasible'] = lambda x: feasibleRn(min, max, x)
+    space['grow'] = lambda x: grow(x, min, length, BITSIZE)
+  else:
+    length = max - min
+    space['feasible'] = lambda x: feasibleR(min, max, x)
+    space['grow'] = lambda x: grow1(x, min, length, BITSIZE)
+  return space
+
+def Real2BinaryPROBLEM(type, f, space, EVALS, TRACE=False):
+  return PROBLEM(type, lambda x: f(space['grow'](x)), space, EVALS, TRACE)
 
 #################### TEST FUNCTIONS ##############
 # Sphere function
@@ -154,5 +193,16 @@ def RealTestProblem(f, D, EVALS, TRACE=False):
   elif(f=='Rosenbrock'): problem = PROBLEM('min', rosenbrock_saddle, RealSpace(-2.048, 2.048, D), EVALS, TRACE)
   if(f=='Sphere'): problem = PROBLEM('min', sphere, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
   else: problem = PROBLEM('min', sphere, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
+  problem['optimum'] = 0.0
+  return problem
+
+##################### TEST PROBLEMS AS BINARY ####################
+def Real2BinaryTestProblem(f, D, EVALS, BITSIZE = 32, TRACE=False):
+  if(f=='Rastrigin'): problem = Real2BinaryPROBLEM('min', rastrigin, Real2Binary(-5.12, 5.12, D, BITSIZE), EVALS, TRACE)
+  elif(f=='Schwefel'): problem = Real2BinaryPROBLEM('min', schwefel, Real2Binary(-500.0, 500.0, D, BITSIZE), EVALS, TRACE)
+  elif(f=='Griewank'): problem = Real2BinaryPROBLEM('min', griewank, Real2Binary(-600.0, 600.0, D, BITSIZE), EVALS, TRACE)
+  elif(f=='Rosenbrock'): problem = Real2BinaryPROBLEM('min', rosenbrock_saddle, Real2Binary(-2.048, 2.048, D, BITSIZE), EVALS, TRACE)
+  if(f=='Sphere'): problem = Real2BinaryPROBLEM('min', sphere, Real2Binary(-5.12, 5.12, D, BITSIZE), EVALS, TRACE)
+  else: problem = Real2BinaryPROBLEM('min', sphere, Real2Binary(-5.12, 5.12, D, BITSIZE), EVALS, TRACE)
   problem['optimum'] = 0.0
   return problem

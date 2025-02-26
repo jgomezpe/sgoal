@@ -220,7 +220,7 @@ def GABO(problem):
   sgoal['next'] = lambda x, fx : next(x, fx, sgoal)
   return sgoal
 
-################### Initialization method (for any SGOAL) using GABO2 ideas ######################
+################### GCOIN: Gen COntribution INitialization method (for any SGOAL) using GABO ideas ######################
 # Analyzes coding alleles
 def codingCheck(x, fx, sgoal):
   f, pick, flip, coding = sgoal['f'], sgoal['pick'], sgoal['flip'], sgoal['coding']
@@ -236,7 +236,7 @@ def codingCheck(x, fx, sgoal):
   return x, fx
 
 # Init a single candidate solution for any Single Point SGoal using GABO2
-def initGABO2(problem):
+def GCOIN(problem):
   sgoal = GABOConfig(problem)
   f, pick, multiflip = sgoal['f'], sgoal['pick'], sgoal['multiflip']
   x, fx = init(sgoal)
@@ -251,10 +251,10 @@ def initGABO2(problem):
   return x, fx
 
 # Init a population of candidate solutions for any SGoal using GABO2
-def initGABO2N(sgoal):
+def GCOINN(sgoal):
   N = sgoal['N']
   sgoal['N'] = 1
-  x, fx = initGABO2(sgoal)
+  x, fx = GCOIN(sgoal)
   sgoal['N'] = N - 1 
   P, fP = initPop(sgoal)
   P.append(x)
