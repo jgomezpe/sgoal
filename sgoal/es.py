@@ -25,6 +25,11 @@ from sgoal.real import gaussianMutationR
 from sgoal.real import gaussianMutationRn
 
 # Replace method of a 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule
+def variation(x, fx, sgoal):
+  y = sgoal['mutation'](x, sgoal['mr'])
+  fy = sgoal['f'](y)
+  return y, fy
+
 def ReplaceR1_5(x, fx, y, fy, sgoal):
   w = x
   x, fx, y, fy = sgoal['pick']( x, fx, y, fy )
@@ -36,7 +41,6 @@ def ReplaceR1_5(x, fx, y, fy, sgoal):
     elif( p < 0.2 ): sgoal['mr'] *= sgoal['a']
     sgoal['Gs'] = 0
     sgoal['I'] = 0
-    sgoal['variation'] = lambda x: sgoal['mutation'](x, sgoal['mr'])
   return x, fx
 
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
@@ -51,7 +55,7 @@ def Rule_1_5th(problem):
   if( 'a' not in problem ): problem['a'] = 0.9
   problem['I'] = 1
   problem['Gs'] = 1
-  problem['variation'] = lambda x: problem['mutation'](x, problem['mr'])
+  problem['variation'] = lambda x, fx: variation(x, fx, problem)
   problem['replace'] = lambda x, fx, y, fy: ReplaceR1_5(x, fx, y, fy, problem)
   return VRSGoal(problem)
 
