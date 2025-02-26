@@ -144,7 +144,7 @@ def BinaryCHAVELA(problem):
 
 # Standard CHAVELA for Real problems. Uses gaussianmutation, simplexover, and transposition as operators
 def RealCHAVELA(problem):
-  if( 'operators' not in problem ): problem['operators'] = [gaussianMutation(problem['feasible']), transposition, simplexover]
+  if( 'operators' not in problem ): problem['operators'] = [gaussianMutation(problem), transposition, simplexover]
   return CHAVELA(problem) 
 
 ############### Single Point CHAVELA ############
