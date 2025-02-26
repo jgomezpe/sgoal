@@ -42,5 +42,5 @@ def RMHC(problem):
 # Classical Hill Climbing Algorithm for Real problems. Uses Gaussian mutation with sigma=0.2 as variation operator
 # problem: Problem to solve
 def RealHC(problem): 
-  if( 'variation' not in problem ): problem['variation'] = gaussianMutation(problem['feasible'])
+  if( 'variation' not in problem ): problem['variation'] = gaussianMutation(problem)
   return VRSGoal(problem) 
