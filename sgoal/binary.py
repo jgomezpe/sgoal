@@ -62,7 +62,6 @@ def bitmutationprob(x, p):
 # Bit mutation. Flips a bit with probability 1/|x| (creates a new one - hard copy)
 def bitmutation(x): return bitmutationprob(x, 1.0/len(x))
 
-
 ##################### TEST FUNCTIONS #####################
 # Computing the MaxOnes function (sum of bits) from the start bit upto end-1 bit. 
 # Sums bits up to the end of the BitArray if end is set to -1
@@ -162,6 +161,23 @@ def mixed(x, start=0, end=-1):
     start += 20
   return f 
 
+# The mixed function 2: Defined in a similar fashion to mixed but using RR2 (royalroad 16  bits)
+# See, J. Gomez and E. Leon, "Gabo: Gene Analysis Bitstring Optimization," 
+# 2022 IEEE Congress on Evolutionary Computation (CEC), Padua, Italy, 2022, pp. 1-8, doi: 10.1109/CEC55065.2022.9870237.
+# A combination of all the previous bit functions, each block of 20 bits is defined as follow
+# 0..9 : maxones
+# 10..15 : deceptive3
+# 16..23 : boundedly
+# 23..39 : royalroad16
+def mixed2(x, start=0, end=-1):
+  if(end==-1): 
+    end = len(x)
+  f = 0
+  while(start<end):
+    f += maxones(x,start,start+10) + deceptive(x,start+10,start+16) + boundedly(x,start+16,start+24) + royalroad16(x,start+24,start+40) 
+    start += 40
+  return f 
+
 
 ##################### TEST PROBLEMS ####################
 def BinaryTestProblem(f, D, EVALS, TRACE=False):
@@ -176,6 +192,9 @@ def BinaryTestProblem(f, D, EVALS, TRACE=False):
   elif(f=='RR2'): f = royalroad16
   elif(f=='Mixed'):
     f = mixed
+    space['optimum'] = 47*D/20
+  elif(f=='Mixed2'):
+    f = mixed2
     space['optimum'] = 47*D/20
   else: f = maxones
   return PROBLEM('max', f, space, EVALS, TRACE)
