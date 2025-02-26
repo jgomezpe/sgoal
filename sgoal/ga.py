@@ -18,16 +18,14 @@
 # (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from sgoal.core import SGoal
+from sgoal.core import caneval
 from sgoal.core import randbool
-from sgoal.core import best
-from sgoal.core import basicInitPop
-from sgoal.core import basicStop
-from sgoal.core import tournament
+from sgoal.core import PopSGoal
+from sgoal.select import min_tournament
+from sgoal.select import max_tournament
 from sgoal.core import simplexover
 from sgoal.binary import bitmutation
-from sgoal.real import lambdaGaussianMutation
-from sgoal.gabo import initPopGABO2N
+from sgoal.real import gaussianMutation
 
 ############### Genetic Algorithm - GA ################
 # problem: Problem to solve
@@ -40,42 +38,42 @@ from sgoal.gabo import initPopGABO2N
 # nextPop: Next population generation method
 # initPop: Process for generating the initial population (by default uses the BitArraySpace generation method)
 # stop: Stopping criteria (by default uses the basic stopping criteria)
-class GA(SGoal):
-  def __init__(self, problem, config, nextPop, initPop=basicInitPop, stop=basicStop):
-    SGoal.__init__(self, problem, nextPop, initPop, stop)
-    self.selection = config['selection']
-    self.mutation = config['mutation']
-    self.xr = config['xr']
-    self.xover = config['xover']
-    self.N = config['N']
-    if(self.N%2==1): 
-      self.N+=1
-    self.poptrace = []
+def GA(problem):
+  if('N' in problem and problem['N'] % 2 != 0): problem['N'] += 1
+  if( 'selection' not in problem ): 
+    if(problem['minimize']): problem['selection'] = min_tournament
+    else: problem['selection'] = max_tournament 
+  if( 'xover' not in problem ): problem['xover'] = simplexover
+  if( 'xr' not in problem ):  problem['xr'] = 0.7
+  return PopSGoal(problem)
 
+def nextPair(P, fP, sgoal):
+  selection, xover, xr, mutation = sgoal['selection'], sgoal['xover'], sgoal['xr'], sgoal['mutation']
+  idx1, idx2 = selection(fP, 2)
+  if randbool(xr):
+    a, b = xover(P[idx1], P[idx2])
+    a = mutation(a)
+    b = mutation(b)
+  else:
+    a = P[idx1]
+    b = P[idx2]
+    a = mutation(a)
+    b = mutation(b)
+  return idx1, idx2, a, b
 
 ############### Generational Genetic Algorithm - GGA ################
-def nextPopGGA(P, fP, sgoal):
+def nextGGA(P, fP, sgoal):
+  f, N = sgoal['f'], sgoal['N']
   Q = []
   fQ = []
-  for i in range(0,sgoal.N,2):
-    idx1, idx2 = sgoal.selection(fP, 2, sgoal.minimize)
-    if sgoal.caneval() and randbool(sgoal.xr):
-      a, b = sgoal.xover(P[idx1], P[idx2])
-      a = sgoal.mutation(a)
-      b = sgoal.mutation(b)
+  for i in range(N//2):
+    if(caneval(sgoal)):
+      idx1, idx2, a, b = nextPair(P, fP, sgoal)
       Q.append(a)
-      fQ.append(sgoal.evalone(a))
-      if(sgoal.caneval()):
-        Q.append(b)
-        fQ.append(sgoal.evalone(b) )
-    else:
-      Q.append( P[idx1] )
-      Q.append( P[idx2] )
-      fQ.append(fP[idx1] )
-      fQ.append(fP[idx2] )
-  P = Q
-  fP = fQ
-  return P, fP
+      fQ.append(f(a))
+      Q.append(b)
+      fQ.append(f(b))
+  return Q, fQ
 
 ############### Generational Genetic Algorithm - GGA ################
 # problem: Problem to solve
@@ -87,27 +85,20 @@ def nextPopGGA(P, fP, sgoal):
 #   N: Population's size (we set to the closest higher even number)
 # initPop: Process for generating the initial population (by default uses the BitArraySpace generation method)
 # stop: Stopping criteria (by default uses the basic stopping criteria)
-def GGA(problem, config, initPop=basicInitPop, stop=basicStop):
-  return GA(problem, config, nextPopGGA, initPop, stop)
+def GGA(problem):
+  problem['next'] = nextGGA
+  return GA(problem)
 
 ############### Steady State Genetic Algorithm - GGA ################
-def nextPopSSGA(P, fP, sgoal):
-  i=0
-  while(i<sgoal.N and sgoal.caneval()):
-    idx1, idx2 = sgoal.selection(fP, 2, sgoal.minimize)
-    p1, p2 = P[idx1], P[idx2]
-    a, b = sgoal.xover(p1, p2)
-    a, b = sgoal.mutation(a), sgoal.mutation(b)
-    fa = sgoal.evalone(a)
-    k = best(fP, not sgoal.minimize)
-    P[k] = a
-    fP[k] = fa
-    if(sgoal.caneval()):
-      k = best(fP, not sgoal.minimize)
-      fb= sgoal.evalone(b)
-      P[k] = b
-      fP[k] = fb
-    i += 2
+def nextSSGA(P, fP, sgoal):
+  f, N, pick = sgoal['f'], sgoal['N'], sgoal['pick']
+  for i in range(N//2):
+    if(caneval(sgoal)):
+      idx1, idx2, a, b = nextPair(P, fP, sgoal)
+      fa = f(a)
+      P[idx1], fP[idx1], a, fa = pick(P[idx1], fP[idx1], a, fa)
+      fb = f(b)
+      P[idx2], fP[idx2], b, fb = pick(P[idx2], fP[idx2], b, fb)
   return P, fP
 
 ############### Steady State Genetic Algorithm - SSGA ################
@@ -120,64 +111,34 @@ def nextPopSSGA(P, fP, sgoal):
 #   N: Population's size (we set to the closest higher even number)
 # initPop: Process for generating the initial population (by default uses the BitArraySpace generation method)
 # stop: Stopping criteria (by default uses the basic stopping criteria)
-def SSGA(problem, config, initPop=basicInitPop, stop=basicStop):
-  return GA(problem, config, nextPopSSGA, initPop, stop)
+def SSGA(problem):
+  problem['next'] = nextSSGA
+  return GA(problem)
 
 ############# Binary versions ##############
-# Basic Genetic Algorithm configuration
-#   selection: tournament selection
-#   xover: simple crossover
-#   xr; Crossover rate set to 0.7
-#   mutation: bitmutation
-#   N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the bitarray length
-def BitArrayGAconfig(D, N=-1):
-  if(N<0): N = max(D//2,100)
-  return {'selection': tournament, 'xover': simplexover, 'xr':0.7, 'mutation':bitmutation, 'N':N}
-  
 ############### Generational Genetic Algorithm - SSGA ################
-# problem: Problem to solve
-# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
-def BitArrayGGA(problem, N=-1):
-  return GGA(problem, BitArrayGAconfig(problem['space'].D, N))
+def bmutation(sgoal):
+  if('mutation' not in sgoal): sgoal['mutation'] = bitmutation
+  return sgoal
+
+def BinaryGGA(problem):
+  return GGA(bmutation(problem))
 
 ############### Steady State Genetic Algorithm - SSGA ################
 # problem: Problem to solve
-# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
-def BitArraySSGA(problem, N=-1):
-  return SSGA(problem, BitArrayGAconfig(problem['space'].D, N))
-
-############### Generational Genetic Algorithm - SSGA ################
-# problem: Problem to solve
-# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
-def GGA_G(problem, N=-1):
-  return GGA(problem, BitArrayGAconfig(problem['space'].D, N), initPopGABO2N)
-
-############### Steady State Genetic Algorithm - SSGA ################
-# problem: Problem to solve
-# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
-def SSGA_G(problem, N=-1):
-  return SSGA(problem, BitArrayGAconfig(problem['space'].D, N), initPopGABO2N)
+def BinarySSGA(problem):
+  return SSGA(bmutation(problem))
 
 ############# Real versions ##############
-# Basic Genetic Algorithm configuration for real encoding
-#   selection: tournament selection
-#   xover: simple crossover
-#   xr; Crossover rate set to 0.7
-#   mutation: gaussian mutation with sigma=0.2
-#   N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
-def RealGAconfig(space, N=-1):
-  D = len(space.min) if isinstance(space.min, list) else 1
-  if(N<0): N = max(D//2,100)
-  return {'selection': tournament, 'xover': simplexover, 'xr':0.7, 'mutation':lambdaGaussianMutation(0.2, space), 'N':N}
-  
 ############### Generational Genetic Algorithm - SSGA ################
-# problem: Problem to solve
-# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
-def RealGGA(problem, N=-1):
-  return GGA(problem, RealGAconfig(problem['space'], N))
+def gmutation(sgoal):
+  if('mutation' not in sgoal): sgoal['mutation'] = gaussianMutation(sgoal)
+  return sgoal
+
+def RealGGA(problem):
+  return GGA(gmutation(problem))
 
 ############### Steady State Genetic Algorithm - SSGA ################
 # problem: Problem to solve
-# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
-def RealSSGA(problem, N=-1):
-  return SSGA(problem, RealGAconfig(problem['space'], N))
+def RealSSGA(problem):
+  return SSGA(gmutation(problem))

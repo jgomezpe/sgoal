@@ -23,252 +23,241 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import random as rand
-from inspect import signature
+from sgoal.util import randbool
+from sgoal.util import arity
 
-############### UTILITY FUNCTIONS ################
-# Generates a boolean value according to probability p ( True with probability p, False otherwise )
-def randbool(p=0.5):
-  return (rand.random() < p)
+############### SEARCH SPACE AND  PROBLEM ################
 
-# A permutation of n elements
-def permutation(n):
-  x = [i for i in range(0,n)]
-  rand.shuffle(x)
-  return x
+# Simple population generation method 
+def simplegetN(N, g):
+  return [g() for i in range(N)]
 
-# Normalizes a vector of weights
-def normalize(weight):
-  c = 0
-  for w in weight: 
-    c += w
-  return [ w/c for w in weight ]
+# Search space: a dictionary with
+#   'get' : one candidate solution generation method
+#   'getN': population generation method. Sets to simplegetN method if no defined
+#   'feasible': Method for determining if a candidate solution is feasible. By default every candidate solution is feasible
+def SPACE(g, gn = None, feasible = lambda x: True):
+  space = {'get':g,'feasible':feasible}
+  if(gn==None): gn = lambda N: simplegetN(N,g)
+  space['getN'] = gn
+  return space
 
-def best(quality, MINIMIZE=True):
-  k = 0
-  if(MINIMIZE):
-    for i in range(1,len(quality)):
-      if(quality[i] <= quality[k]): 
-        k = i
-  else:
-    for i in range(1,len(quality)):
-      if(quality[i] >= quality[k]): 
-        k = i
-  return k
+# Problem. Extends the Space dictionary with the following keys
+#   'type' : set to 'min' for minimization, set to 'max' for maximization
+#   'f' : Wraps the objective function with function eval to record the best progression and traced information
+#   'EVALS': Maximum number of function evaluations
+#   'minimize': Set to True if the problem is a minimization problem and set to False if a maximization one
+#   'pick': Sorts two solutions accoriding to the type of optimization problem (first is the best)
+#   'trace': A dictionary with all the information to be traced if required (when set to True in the problem)
+#       'f': Evolution (in time) of values of the objective function (calls)
+#       'fP':Evolution (in time) of values of the objective function for a population based method
+def PROBLEM(type, f, space, EVALS, TRACE=False):
+  space['f'] = lambda x: eval(x, f, space)
+  space['EVALS'] = EVALS
+  space['minimize'] = type=='min'
+  if(space['minimize']): space['pick'] = min_pick
+  else: space['pick'] = max_pick
+  if(TRACE): space['trace'] = {'f':[], 'fP':[]}
+  else: space['trace'] = None
+  return space
 
-# Arity of a function f
-def arity(f): return len(signature(f).parameters)
-  
-############### SELECTION MECHANISMS ################
-# Uniform selection. Picks N elements (indices) with the same probability
-def uniform(quality, N, MINIMIZE=True):
-  return [rand.randint(0,len(quality)-1) for i in range(N)]
-
-# Tournament selection. Selects 1 individual.
-# Picks 4 individuals at random and returns the best one
-def tournament1(quality, MINIMIZE=True):
-  m = 4 #Tournament's size
-  candidate = uniform(quality, m, MINIMIZE)
-  x = 0
-  for k in range(1,m):
-    if (MINIMIZE and quality[candidate[x]] >= quality[candidate[k]]) or (not MINIMIZE and quality[candidate[x]] <= quality[candidate[k]]):
-      x = k
-  return candidate[x]
-  
-# Tournament selection. Selects N individuals.
-# Uses tournament1 for each individual to be selected
-def tournament(quality, N, MINIMIZE=True):
-  return [tournament1(quality,MINIMIZE) for i in range(N)]
-
-# Weighted selection: p_i is the probability of selecting element i
-def weighted(p):
-  y = rand.random()
-  k=0
-  while k<len(p) and y>=p[k]:
-    y -= p[k]
-    k+=1
-  return k
-
-# Adjust function values (quality arrays) to real quality measures (q_i > 0)
-def adjustquality(quality, MINIMIZE=True):
-  if(MINIMIZE):
-    quality = [-q for q in quality]
-  else:
-    quality = quality.copy()
-  m = min(quality)
-  i=0
-  n = len(quality)
-  while(i<n and m==quality[i]):
-    i+=1
-  if(i==n):
-    return [1 for i in range(n)]
-  m2 = quality[i]
-  i+=1
-  while(i<n):
-    if(m < quality[i] and m2>quality[i]):
-      m2 = quality[i]
-    i+=1
-  d = m2 - m
-  return [q - m + d for q in quality]
-
-# Roulette wheel selection. Selects N individuals.
-def roulette(quality, N, MINIMIZE=True):
-  weight = normalize(adjustquality(quality, MINIMIZE))
-  p = normalize(weight)
-  return [weighted(p) for i in range(N)]
-
-############### SEARCH SPACE ################
-class Space:
-  # Gets one point in the search space
-  def getone(self):
-    return []
-
-  # Determines if a candidate solution is feasible
-  def feasible(self, x):
-    return True
-
-  # Gets N points in the search space
-  def get(self, N):
-    if(N==1):
-      return self.getone()
-    return [self.getone() for i in range(N)]
-
-############### VARIATION OPERATIONS ################
+############### GENERIC LIST VARIATION OPERATIONS ################
 # Simple crossover.
 def simplexover( x1, x2 ):
-  p = rand.randint(1,len(x1)-1)
-  y1 = x1[0:p] + x2[p:len(x2)]
-  y2 = x2[0:p] + x1[p:len(x1)]
+  n = len(x1)
+  p = rand.randint(1,n-1)
+  y1 = x1[0:p] + x2[p:n]
+  y2 = x2[0:p] + x1[p:n]
+  if(randbool()): y1, y2 = y2, y1
   return y1, y2
 
 # Transposition
-def transposition(x):
-  x = x.copy()
+def transposition( x ):
+  y = x.copy()
   start = rand.randint(0,len(x)-1)
   end = rand.randint(0,len(x)-1)
   if start>end: start, end = end, start
   while start<end:
-    x[start], x[end] = x[end], x[start]
+    y[start], y[end] = y[end], y[start]
     start += 1
     end -= 1
-  return x
+  return y
 
+############### UTILITY FUNCTIONS ##############
+# Returns two candidate solutions according to their function value and minimization problem
+# The first solution returned is the best one. 
+def min_pick(x, fx, y, fy):
+  if(fy <= fx):
+    return y, fy, x, fx
+  return x, fx, y, fy
 
-############### STOCHASTIC GLOBAL OPTIMIZATION ALGORITHM ################
+# Returns two candidate solutions according to their function value and maximization problem
+# The first solution returned is the best one. 
+def max_pick(x, fx, y, fy):
+  if(fy >= fx):
+    return y, fy, x, fx
+  return x, fx, y, fy
+
+# Traces a candidate solution and its objective function value
+def rec(x, fx, sgoal):
+  sgoal['count'] += sgoal['delta']
+
+  if('best' not in sgoal):
+    sgoal['best'] ={'x':x, 'f':fx, 'evals':sgoal['count']}
+  else:
+    best = sgoal['best']
+    best['x'], best['f'], b, fb = sgoal['pick'](best['x'], best['f'], x, fx)
+    if(best['f'] != fb and fx != fb): best['evals'] = sgoal['count']
+
+  if(sgoal['trace'] != None): sgoal['trace']['f'].append(fx)
+
+# Evaluates the objective function in a candidate solution (traces information)
+def eval(x, f, sgoal):
+  fx = f(x)
+  rec(x, fx, sgoal)
+  return fx
+
+# Determines if the SGoal can eval the objective function n times
+def caneval(sgoal):
+  return sgoal['count'] < sgoal['EVALS']
+
+# Determines if the SGoal found the optimum value (if such information is available - for testing purposes)
+def optimumfound(sgoal):
+  return sgoal['best']['f']==sgoal['optimum']
+
 # Stops the SGoal if cannot eval the objective function anymore or the optimal
 # value is found (if available and for testing purposes)
-def basicStop(sgoal):
-  return not sgoal.caneval() or sgoal.optimumfound()
+def basicstop(sgoal):
+  return not caneval(sgoal) or optimumfound(sgoal)
 
-# Basic population initialization
-def basicInitPop(sgoal):
-  P = sgoal.space.get(sgoal.N)
-  fP = sgoal.eval(P)
-  sgoal.tracing(P,fP)
+############### STOCHASTIC GLOBAL OPTIMIZATION ALGORITHM ################
+# Extends the Problem dictionary with the following keys
+#   'count': Number of function evaluations up to now (when consulted)
+#   'delta': Part (or full) function evaluations carried by the last function called (by default set to 1)
+#   'optimum': Optimum value if provided. Set to None otherwise
+#   'stop': Stopping criteria (predicate without reveiving arguments - usually a lambda of a function receiving the sgoal).
+#           By default set to lambda of basicstop
+#   'best': Current best solution. A dictionary with the following keys
+#       'x': Starting candidate solution
+#       'f': value of the objective function on x
+#       'evals': Amount of function calls to obtain it
+#   'init': The init candidate solution/population method (must be provided by a concrete SGoal)
+#   'next': The next candidate solution/population method (must be provided by a concrete SGoal)
+#   'start': Optional starting candidate solution. A dictionary with the following keys
+#       'x': Starting candidate solution
+#       'f': value of the objective function on x
+#       'evals': Amount of function calls to obtain it
+def SGOAL(problem):
+  sgoal = problem
+  sgoal['count'] = 0
+  sgoal['delta'] = 1
+  if('optimum' not in sgoal): sgoal['optimum'] = None
+  if('stop' not in sgoal): sgoal['stop'] = lambda : basicstop(sgoal)
+  return sgoal
+
+# Runs the SGoal a maximum of MAXEVALS and traces information is desired
+def run( sgoal ):
+  InitPop, Stop, NextPop, N, trace = sgoal['init'], sgoal['stop'], sgoal['next'], sgoal['N'], sgoal['trace']
+  P, fP = InitPop()
+  if(N>1): tracepop(fP, trace)
+  while( not Stop() ):
+    P, fP = NextPop(P, fP)
+    if(N>1): tracepop(fP, trace)
+  return sgoal['best']
+
+##################  SINGLE POINT SGOAL ####################
+# Inits a candidate solution
+def init(sgoal):
+  if('start' in sgoal):
+    start = sgoal['start']
+    x = start['x']
+    fx = start['f']
+    sgoal['count'] = start['evals'] if 'evals' in start else 1
+  else:
+    x = sgoal['get']()
+    fx = sgoal['f'](x)
+  return x, fx
+
+# Single point SGoal. Sets the initPopulation to init if not provided
+def SPSGoal(problem):
+  problem['N'] = 1
+  if('init' not in problem): problem['init'] = lambda: init(problem)
+  return SGOAL(problem)
+
+########### Variation/Replace Single Point SGOAL ###########
+# next method combining a variation and replacement strategies
+def next(x, fx, sgoal):
+  V, R = sgoal['variation'], sgoal['replace']
+  y, fy = V(x, fx)
+  return R(x, fx, y, fy)
+
+# Simple replace method: picks the best with neutral mutation
+def simplereplace(x, fx, y, fy, sgoal):
+  x, fx, y, fy = sgoal['pick'](x, fx, y, fy)
+  return x, fx
+
+# Simple variation method: applies a variation and computes the function on the produced candidate solution
+def variation( x, fx, oper, sgoal):  
+  y = oper(x)
+  fy = sgoal['f'](y)
+  return y, fy
+
+# Variation/Replace Single Point SGOAL. Extends the SGoal with keys:
+#   'variation': Variation operator. Wraps a variation operator if required (when it does not take into account SGOAL info)
+#   'replace': Replacement method. Set to simplereplace if not provided
+def VRSGoal(problem):
+  problem['next'] = lambda x, fx: next(x, fx, problem)
+  if('replace' not in problem): problem['replace'] = lambda x,fx, y, fy : simplereplace(x, fx, y, fy, problem)
+  if('variation' in problem and arity(problem['variation'])==1): 
+    v = problem['variation']
+    problem['variation'] = lambda x, fx: variation(x, fx, v, problem)
+  return SPSGoal(problem)
+
+##################  POPULATION SGOAL ####################
+# Trace population information
+def tracepop(fP, trace):
+  if(trace!=None):
+    trace['fP'].append(fP.copy())
+
+# Evaluates a population of candidate solutions
+def evalPop(P, f): return [f(x) for x in P]
+
+# Inits a population of candidate solutions
+def initPop(sgoal):
+  f, N, getN = sgoal['f'], sgoal['N'], sgoal['getN']
+  if('start' in sgoal):
+    start = sgoal['start']
+    x = start['x']
+    fx = start['f']
+    sgoal['count'] = start['evals'] if 'evals' in start else 1
+    P = getN(N-1)
+    fP= evalPop(P, f)
+    P.append(x)
+    fP.append(fx)
+  else:
+    P = getN(N)
+    fP= evalPop(P, f)
   return P, fP
 
-#Stochastic Global Optimization Algorithm
-# problem: Problem to solve
-#   f: Objective function
-#   space: Solution space 
-#   minimize: If minimizing (True) or maximizing (False)
-# nextPop: Next population generation method
-# initPop: Process for generating the initial population (by default uses the BitArraySpace generation method)
-# stop: Stopping criteria (by default uses the basic stopping criteria)
-class SGoal:
-  def __init__(self, problem, nextPop, initPop=basicInitPop, stop=basicStop):
-    self.f = problem['f']
-    self.space = problem['space']
-    self.minimize = problem['type'].lower()=='min'
-    self.optimum = problem['optimum'] if 'optimum' in problem else None
-    self.count = 0
-    self.result = {}
-    self.trace = []
-    self.poptrace = []
-    self.besttrace = []
-    self.N = 1
-    self.initPop = initPop
-    self.nextPop = nextPop
-    self.stop = stop
-    self.evals = 1
-    self.TRACE = False
+# Population Based SGOAL. Sets the population size to 128 and uses initPop as initPopulation method if not provided
+def PopSGoal(problem):
+  if('N' not in problem): problem['N'] = 128
+  if('init' not in problem): problem['init'] = lambda: initPop(problem)
+  return SGOAL(problem)
 
-  # Runs the SGoal a maximum of MAXEVALS and tracing information is desired
-  def run( self, MAXEVALS, TRACE=False ):
-    self.evals = MAXEVALS
-    self.TRACE = TRACE
-    P, fP = self.initPop(self)
-    while( not self.stop(self) ):
-      P, fP = self.nextPop(P, fP, self)
-      if(TRACE):
-        self.tracing(P,fP)
-    if('evals' not in self.result):
-      self.result['evals'] = self.count
-    return self.result
 
-  # Determines if the SGoal can eval the objective function n times
-  def caneval(self, n=1):
-    return self.count+n <= self.evals
-  
-  # Determines if the SGoal found the optimum value (if such information is available - for testing purposes)
-  def optimumfound(self):
-    return self.result['f']==self.optimum
-  
-  # Trace method. Traces best value found, population information, and computed objective function values
-  def tracing(self, P, fP):  
-    if(self.N > 1):
-      if(self.minimize): 
-        self.poptrace.append(min(fP))
-      else: 
-        self.poptrace.append(max(fP))
-    self.result['trace'] = self.trace
-    self.result['besttrace'] = self.besttrace
-    self.result['poptrace'] = self.poptrace
-
-  # Returns two candidate solutions according to their function value and type of optimization problem
-  # The first solution returned is the best one. 
-  def pick(self, x, fx, y, fy):
-    if((self.minimize and fy <= fx) or (not self.minimize and fy >= fx)):
-        return y, fy, x, fx
-    return x, fx, y, fy
-
-  # Evaluates the objective function in a candidate solution (traces information)
-  def evalone(self, x):
-    self.count+=1
-    fx = self.f(x)
-    if('x' not in self.result):
-      self.result['x'] = x
-      self.result['f'] = fx
-    else:
-      self.result['x'], self.result['f'], b, fb = self.pick(x, fx, self.result['x'], self.result['f'])
-    if(fx==self.optimum):
-      self.result['evals'] = self.count
-    if(self.TRACE):
-      self.trace.append(fx)
-      self.besttrace.append(self.result['f'])
-    return fx
-
-  # Evaluates the objective function in a population (traces information accordingly)
-  def evalpop(self, P):
-    i=0
-    fP = []
-    while(self.caneval() and i<len(P)):
-      fP.append(self.evalone(P[i]))
-      i+=1
-    return fP
-
-  # Evals a candidate solution or a population.
-  def eval(self, x):
-    if(self.N==1):
-      return self.evalone(x)
-    return self.evalpop(x)
-
+############ EXPERIMENT MODE ###########
 # Runs an SGoal in experiment mode. Runs R times the SGoal on the given problem and produces 
 # fx: An array of the best objective function value found by each one of the R runs of the SGoal
 # evals: An array of the objective function evaluations required by the SGoal to achieve such value
 # sr: Success rate. Number of times the SGoal found the optimum value (if available).
-def experiment(sgoal, problem, MAXEVALS, R=100):
-  opt = problem['optimum'] if 'optimum' in problem else None
-  r = [sgoal(problem).run(MAXEVALS) for i in range(R)]
+def experiment(sgoal, problem, R=100):
+  r = []
+  for k in range(R):
+    p = problem()
+    opt = p['optimum'] if 'optimum' in p else None
+    alg = sgoal(p)
+    r.append(run(alg))  
   fx = [y['f'] for y in r]
   evals = [y['evals'] for y in r]
   sr = sum([1 if f==opt else 0 for f in fx]) / R

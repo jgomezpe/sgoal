@@ -20,251 +20,244 @@
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import random as rand
-from sgoal.core import SGoal
-from sgoal.core import permutation
-from sgoal.binary import flip
+from sgoal.core import caneval
+from sgoal.core import SPSGoal
+from sgoal.util import permutation
 from sgoal.binary import multiflip
-from sgoal.binary import complement
-from sgoal.core import basicInitPop
-from sgoal.core import basicStop
+from sgoal.binary import flip
+from sgoal.core import initPop
+from sgoal.core import init
 
-# Init GABO attributes
-def initGABOInfo(sgoal):
-  sgoal.contribution = []
-  D = sgoal.space.D
-  sgoal.contribution = [[] for k in range(D)]
-  sgoal.candidate = [[] for k in range(D)]
-  sgoal.intron = [k for k in range(D)]
-  sgoal.nonintron = []
-  sgoal.coding = []
 
 # Computes contribution information (relative to a value 1), i.e., some change 
-# in the f value
+# in the f value. Minimization version
 # x: A candidate solution
 # y: The candidate solution with the k-th bit flipped 
 # fx: f value of x
 # fy: f value of y
 # k: Gene's locus
-def C(x, fx, fy, k, sgoal):
-  if( sgoal.minimize ): c = fy-fx
-  else: c = fx-fy
+def min_C(x, fx, fy, k, sgoal):
+  c = fy-fx
   if(x[k]==0): c = -c 
-  sgoal.contribution[k].append(c)
-  sgoal.candidate[k].append(x)
+  sgoal['C'][k].append(c)
   return c
-  
-# Intron/Coding genes splitting
-def ICSplit(x, fx, sgoal):
+
+# Computes contribution information (relative to a value 1), i.e., some change 
+# in the f value. Maximization version
+# x: A candidate solution
+# y: The candidate solution with the k-th bit flipped 
+# fx: f value of x
+# fy: f value of y
+# k: Gene's locus
+def max_C(x, fx, fy, k, sgoal):
+  c = fx-fy
+  if(x[k]==0): c = -c 
+  sgoal['C'][k].append(c)
+  return c
+
+# Evals contribution for each gene and gets the best according to improvements
+def allelesCheck(x, fx, sgoal):
+  pick, flip = sgoal['pick'], sgoal['flip']
+  if(sgoal['minimize']): C = min_C
+  else: C = max_C
+
   P = permutation(len(x))
   for k in P:
-    if(not sgoal.caneval()): return x, fx
-    y = flip(x,k)
-    fy = sgoal.evalone(y)
-    x, fx, y, fy = sgoal.pick(x, fx, y, fy)
-    if( C(x, fx, fy, k, sgoal) != 0 ): 
-      sgoal.intron.remove(k)
-      sgoal.coding.append(k)  
+    if(not caneval(sgoal)): return x, fx
+    y, fy = flip(x,fx,k)
+    x, fx, y, fy = pick(x, fx, y, fy)
+    C(x, fx, fy, k, sgoal)
+  return x, fx
+
+# Checks if a gene looks like intron
+def intronLike(C):
+  for k in C:
+    if(k!=0): return False
+  return True
+
+# Splits genes into intron like and coding like genes according to computed contributions
+def split(C):
+  intron = []
+  coding = []
+  for k in range(len(C)):
+    if(intronLike(C[k])): intron.append(k)
+    else: coding.append(k)
+  return intron, coding
+
+# Initial Intron/Coding genes splitting
+def ICSplit(x, fx, sgoal):
+  x, fx = allelesCheck(x, fx, sgoal)
+  sgoal['intron'], sgoal['coding'] = split(sgoal['C'])
   return x, fx
 
 # Intron Only Search Algorithm
 def IOSA(x, fx, sgoal):
-  N = len(sgoal.intron)
-  rand.shuffle(sgoal.intron)
+  pick, flip, intron, nonintron = sgoal['pick'], sgoal['flip'], sgoal['intron'], sgoal['nonintron']
+  if(sgoal['minimize']): C = min_C
+  else: C = max_C
+  N = len(intron)
+  rand.shuffle(intron)
   i=0
   while(i<N):
-    if(not sgoal.caneval()): return x, fx
-    k = sgoal.intron[i] # Picks and analyzes one intron-like locus
-    y = flip(x,k)
-    fy = sgoal.evalone(y)
-    x, fx, y, fy = sgoal.pick(x, fx, y, fy)
+    if(not caneval(sgoal)): return x, fx
+    k = intron[i] # Picks and analyzes one intron-like locus
+    y, fy = flip(x, fx, k)
+    x, fx, y, fy = pick(x, fx, y, fy)
     if( C(x, fx, fy, k, sgoal) != 0 ):
-      sgoal.nonintron.append(k)
-      sgoal.intron.pop(i)
+      nonintron.append(k)
+      intron.pop(i)
       N-=1
     else:
       i += 1
   return x, fx
 
-# Checks if an allele looks like separable by considering its computed contributions
-def checkseparable(C):
-  c = C[0]
-  for i in range(1,len(C)):
-    if(c!=C[i]):
-      return False
-  return True
-
-# Splits coding alleles in separable/nonseparable according to their contributions
-def analize(sgoal):
-  separable = []
-  nonseparable = []
-  for k in sgoal.coding:
-    if(checkseparable(sgoal.contribution[k])):
-      separable.append(k)
-    else:
-      nonseparable.append(k)
-  for k in sgoal.coding:
-    b = []
-    for l in sgoal.coding:
-      if(l!=k and sgoal.candidate[k][0][l]==sgoal.candidate[k][1][l]):
-        b.append(l)
-    x = sgoal.candidate[k][0]
-    y = flip(x, k)
-    xc = multiflip(x, b)
-    fxc = sgoal.evalone(xc)
-    yc = multiflip(y, b)
-    fyc = sgoal.evalone(yc)
-    C(xc, fxc, fyc, k, sgoal)
-  separable = []
-  nonseparable = []
-  for k in sgoal.coding:
-    if(checkseparable(sgoal.contribution[k])):
-      separable.append(k)
-    else:
-      nonseparable.append(k)
-  return separable, nonseparable
-
 # Checks all the information about the gene's contribution to get the higher one,
 # determines the best allele (0, 1, or None) for the gene
 # k: Locus (gene's position)
 # b: Current value of the gene (allele)
-def best_allele(k, b, sgoal):
+def bestAllele(k, b, C):
   a, c = b, 0
-  for ci in sgoal.contribution[k]:
+  for ci in C[k]:
     if(ci>c): a, c = 1, ci
     elif(-ci>c): a, c =  0, -ci
   return a
+
+# Generates a candidate solution with the alleles in the value having the highest contribution
+def bestAlleles(x, sgoal):
+  C = sgoal['C']
+  return [bestAllele(k, x[k], C) for k in range(len(x))]
 
 # Creates a genome with its best genes according to gene contribution and return the best between it and the original genome
 # f: Function to be optimized
 # evals: Maximum number of fitness evaluations
 # x: current geneme, used for completing intron-like genes
 # fx: Fitness value of the current genome
-def genome_best_gene_contribution(x, fx, sgoal):
+def bestByContribution(x, fx, sgoal):
   #if(not self.stop()):
-  y = [best_allele(k, x[k], sgoal) for k in range(len(x))] 
-  fy = sgoal.evalone(y)
-  x, fx, y, fy = sgoal.pick(x, fx, y, fy)
+  f, pick = sgoal['f'], sgoal['pick']
+  y = bestAlleles(x, sgoal)
+  fy = f(y)
+  x, fx, y, fy = pick(x, fx, y, fy)
   return x, fx
-
-# Computes the coding complement of a genome. 
-# The coding complement flips each gene that is considered coding and maintains other genes the same
-# x: Genome to be complemented in the coding-like genes
-def coding_complement(x, sgoal):
-  N = len(sgoal.coding)
-  if(N>0):
-    y = x.copy()
-    for i in sgoal.coding:
-      y[i] = 1 if y[i]==0 else 0
-  else:
-    y = complement(x)
-  return y
   
 # Coding Only Search Algorithm
 def COSA( x, fx, sgoal ):
-  if(len(sgoal.coding)==0 or not sgoal.caneval()): 
-    return x, fx
-  N = len(sgoal.coding)
-  xc = coding_complement(x, sgoal)
-  fxc = sgoal.evalone(xc)
-  x, fx, xc, fxc = sgoal.pick(x, fx, xc, fxc)
+  pick, flip, multiflip, coding = sgoal['pick'], sgoal['flip'], sgoal['multiflip'], sgoal['coding']
+  if(sgoal['minimize']): C = min_C
+  else: C = max_C
+
+  if(len(coding)==0 or not caneval(sgoal)): return x, fx
+
+  N = len(coding)
+  xc, fxc = multiflip(x, fx, coding)
+  x, fx, xc, fxc = pick(x, fx, xc, fxc)
 
   # Considers locus by locus in a random fashion
   perm = permutation(N)
   for i in perm:
-    k = sgoal.coding[i]
-    if(not sgoal.caneval(2)): 
-      return x, fx
-    y = flip(x,k)
-    fy = sgoal.evalone(y)
-    yc = coding_complement(y, sgoal)
-    fyc = sgoal.evalone(yc)    
-    cx = C(x, fx, fy, k, sgoal)
-    cxc = C(xc, fxc, fyc, k, sgoal)
-    #if(cx!=cxc):
-    #  self.nonseparable[k] = 1
+    k = coding[i]
+    if(not caneval(sgoal)): return x, fx
+    y, fy = flip(x, fx, k)
+    yc, fyc = multiflip(y, fy, coding)
+    C(x, fx, fy, k, sgoal)
+    C(xc, fxc, fyc, k, sgoal)
     w = x
-    y, fy, yc, fyc = sgoal.pick( y, fy, yc, fyc )
-    x, fx, y, fy = sgoal.pick( x, fx, y, fy )
+    y, fy, yc, fyc = pick( y, fy, yc, fyc )
+    x, fx, y, fy = pick( x, fx, y, fy )
     if(w!=x): xc, fxc = yc, fyc
-  x, fx = genome_best_gene_contribution(x, fx, sgoal)
+  x, fx = bestByContribution(x, fx, sgoal)
   return x, fx
 
   
 ############ GABO: Gene Analysis Bitstring Optimization #############
 # Next Population method of the GABO Algorithm
-def nextPopGABO( P, fP, sgoal ):
-  x, fx = IOSA(P, fP, sgoal)
+def next( x, fx, sgoal ):
+  x, fx = IOSA(x, fx, sgoal)
   x, fx = COSA(x, fx, sgoal)
   return x, fx
 
-# Init Population method of the GABO Algorithm
-def initPopGABO(sgoal):
-  initGABOInfo(sgoal)
-  x, fx = basicInitPop(sgoal)
+# Init individual method of the GABO Algorithm
+def initGABO(sgoal):
+  x, fx = init(sgoal)
   x, fx = ICSplit(x, fx, sgoal)
-  x, fx = genome_best_gene_contribution(x, fx, sgoal)
+  x, fx = bestByContribution(x, fx, sgoal)
   x, fx = COSA(x, fx, sgoal)
   return x, fx
 
-# GABO Algorithm
-# problem: BitArray problem to solve
-def GABO(problem):
-  return SGoal(problem, nextPopGABO, initPopGABO, basicStop)
+# Flip a bit -> variation form
+def sflip(x, fx, k, sgoal): 
+  y = flip(x, k)
+  fy = sgoal['f'](y)
+  return y, fy
 
-################### GABO2 ######################
+# Multi Flip bits -> variation form
+def mflip(x, fx, k, sgoal): 
+  y = multiflip(x, k)
+  fy = sgoal['f'](y)
+  return y, fy
+
+# GABO Algorithm Configuration. Extends a Binary Problem with the follwoing keys
+#   'C': Contribution information (A vector with all alleles computed contributions) 
+#   'intron': Array with intron like allele indices
+#   'nonintron': Array with non-intron like allele indices according to IOSA
+#   'coding': Array with coding allele indices
+#   'flip': Bit flip method --> variation form (by default sets sflip)
+#   'flip': MultiBit flip method --> variation form (by default sets mflip)
+def GABOConfig(problem):
+  D = problem['D']
+  problem['C'] = [[] for k in range(D)]
+  problem['intron'] = [k for k in range(D)]
+  problem['nonintron'] = []
+  problem['coding'] = []
+  if('flip' not in problem): problem['flip'] = lambda x, fx, k: sflip(x, fx, k, problem)
+  if('multiflip' not in problem): problem['multiflip'] = lambda x, fx, k: mflip(x, fx, k, problem)
+  return SPSGoal(problem)
+
+# GABO Algorithm.
+def GABO(problem):
+  sgoal = GABOConfig(problem)
+  sgoal['init'] = lambda : initGABO(sgoal)
+  sgoal['next'] = lambda x, fx : next(x, fx, sgoal)
+  return sgoal
+
+################### Initialization method (for any SGOAL) using GABO2 ideas ######################
 # Analyzes coding alleles
-def codingcheck(x, fx, sgoal):
-  P = permutation(len(sgoal.coding))
+def codingCheck(x, fx, sgoal):
+  f, pick, flip, coding = sgoal['f'], sgoal['pick'], sgoal['flip'], sgoal['coding']
+  if(sgoal['minimize']): C = min_C
+  else: C = max_C
+  P = permutation(len(coding))
   for i in P:
-    if(not sgoal.caneval()): return x, fx
-    k = sgoal.coding[i]
-    y = flip(x,k)
-    fy = sgoal.evalone(y)
-    x, fx, y, fy = sgoal.pick(x, fx, y, fy)
+    if(not caneval(sgoal)): return x, fx
+    k = coding[i]
+    y, fy = flip(x, fx, k)
+    x, fx, y, fy = pick(x, fx, y, fy)
     C(x, fx, fy, k, sgoal)
   return x, fx
 
-# Init population methof of the GABO2 Algorithm
-def initPopGABO2(sgoal):
-  initGABOInfo(sgoal)
-  x, fx = basicInitPop(sgoal)
+# Init a single candidate solution for any Single Point SGoal using GABO2
+def initGABO2(problem):
+  sgoal = GABOConfig(problem)
+  f, pick, multiflip = sgoal['f'], sgoal['pick'], sgoal['multiflip']
+  x, fx = init(sgoal)
   x, fx = ICSplit(x, fx, sgoal)
-  y, fy = genome_best_gene_contribution(x, fx, sgoal)
-  yc = coding_complement(y, sgoal)
-  fyc = sgoal.evalone(yc)
-  yc, fyc = codingcheck(yc, fyc, sgoal)
-  y, fy, yc, fyc = sgoal.pick(y, fy, yc, fyc)
-  x, fx, y, fy = sgoal.pick(x, fx, y, fy)
-  y, fy = genome_best_gene_contribution(x, fx, sgoal)
-  x, fx, y, fy = sgoal.pick(x, fx, y, fy)
-  sgoal.coding.sort()
-  sgoal.intron.sort()
-  #sep, nonsep = analize(sgoal)
-  #print('sep:', sep)
-  #print('nonsep:', nonsep)
-  #print('intron:', sgoal.intron)
+  y, fy = bestByContribution(x, fx, sgoal)
+  yc, fyc = multiflip(y, fy, sgoal['coding'])
+  yc, fyc = codingCheck(yc, fyc, sgoal)
+  y, fy, yc, fyc = pick(y, fy, yc, fyc)
+  x, fx, y, fy = pick(x, fx, y, fy)
+  y, fy = bestByContribution(x, fx, sgoal)
+  x, fx, y, fy = pick(x, fx, y, fy)
   return x, fx
 
-def GABO2Stop(sgoal):
-  return basicStop(sgoal) or len(sgoal.intron)==0
-
-# GABO2 Algorithm
-# problem: Problem to solve
-def GABO2(problem):
-  return SGoal(problem, IOSA, initPopGABO2, GABO2Stop)
-
-# GABO2x Algorithm
-# problem: Problem to solve
-def GABO2x(problem):
-  return SGoal(problem, IOSA, initPopGABO2, lambda x : True)
-
-def initPopGABO2N(sgoal):
-  N = sgoal.N
-  sgoal.N = 1
-  x, fx = initPopGABO2(sgoal)
-  sgoal.N = N - 1 
-  P, fP = basicInitPop(sgoal)
+# Init a population of candidate solutions for any SGoal using GABO2
+def initGABO2N(sgoal):
+  N = sgoal['N']
+  sgoal['N'] = 1
+  x, fx = initGABO2(sgoal)
+  sgoal['N'] = N - 1 
+  P, fP = initPop(sgoal)
   P.append(x)
   fP.append(fx)
-  sgoal.N = N
+  sgoal['N'] = N
   return P, fP

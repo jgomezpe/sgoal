@@ -18,19 +18,17 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import random as rand
-from sgoal.core import Space
+from sgoal.core import SPACE
+from sgoal.core import PROBLEM
 from sgoal.core import randbool
 
-# Fixed Length BitArray Space
-# D : Length of the BitArray
-class BitArraySpace(Space):
-  def __init__(self, D):
-    self.D = D
+# Fixed Length Binary Space
+# D : Length of the BitArray (Binary string)
+def Binary(D): 
+  space = SPACE( lambda: [1 if randbool() else 0 for i in range(D)] )
+  space['D'] = D
+  return space
 
-  # Produces one random BitArray of length D
-  def getone(self):
-    return [1 if randbool() else 0 for i in range(self.D)]
- 
 ############### VARIATION OPERATIONS ################
 # Flips the kth bit of BitArray x (creates a new one - hard copy)
 def flip(x, k):
@@ -38,7 +36,7 @@ def flip(x, k):
   y[k] = 1 if y[k]==0 else 0
   return y
 
-# Generates the complement bitstring (creates a new one - hard copy)
+# Generates the complement ButArray by flipping each bit (creates a new one - hard copy)
 def complement(x): return [1 if v==0 else 0 for v in x]
 
 # Single bit mutation: Flips a single bit chosen in a random fashion (creates a new one - hard copy)
@@ -47,6 +45,7 @@ def singlebitmutation(x):
 
 # Multiple bits mutation: Flips the set of bits in the indices array k (creates a new one - hard copy)
 def multiflip(x, k):
+  if(len(k)==0): k=[i for i in range(len(x))]
   y = x.copy()
   for i in k:
     y[i] = 1 if y[i]==0 else 0
@@ -165,17 +164,18 @@ def mixed(x, start=0, end=-1):
 
 
 ##################### TEST PROBLEMS ####################
-def BitArrayProblem(f, D):
-  if(f=='MaxOnes'):
-    return {'f':maxones, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
-  if(f=='GD3'):
-    return {'f':deceptive, 'space': BitArraySpace(D), 'optimum':10*D, 'type':'max'}
-  if(f=='GD4'):
-    return {'f':boundedly, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
-  if(f=='RR1'):
-    return {'f':royalroad8, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
-  if(f=='RR2'):
-    return {'f':royalroad16, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
-  if(f=='Mixed'):
-    return {'f':mixed, 'space': BitArraySpace(D), 'optimum':47*D/20, 'type':'max'}
-  return {'f':maxones, 'space': BitArraySpace(D), 'optimum':D, 'type':'max'}
+def BinaryTestProblem(f, D, EVALS, TRACE=False):
+  space = Binary(D)
+  space['optimum'] = D
+  if(f=='MaxOnes'): f = maxones
+  elif(f=='GD3'): 
+    f = deceptive
+    space['optimum'] = 10*D
+  elif(f=='GD4'): f = boundedly
+  elif(f=='RR1'): f = royalroad8
+  elif(f=='RR2'): f = royalroad16
+  elif(f=='Mixed'):
+    f = mixed
+    space['optimum'] = 47*D/20
+  else: f = maxones
+  return PROBLEM('max', f, space, EVALS, TRACE)

@@ -1,36 +1,66 @@
+# Real vector search space definitions
+# Copyright (c)
+# Authors: Jonatan Gomez and Elizabeth León  
+# E-mails: jgomezpe@unal.edu.co  and eleonguz@unal.edu.co
+# All rights reserved.
+# Licence
+# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+# Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+# Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer 
+# in the documentation and/or other materials provided with the distribution.
+# Neither the name of the copyright owners, their employers, nor the names of its contributors may be used to endorse or 
+# promote products derived from sgoal.this software without specific prior written permission.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, 
+# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE COPYRIGHT OWNERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import math
 import random as rand
 from sgoal.core import randbool
-from sgoal.core import Space
+from sgoal.core import SPACE
+from sgoal.core import PROBLEM
+from sgoal.core import simplegetN
 
-# Fixed Length RealSpace
-# min: Min values
-# max: Max values
-class RealSpace(Space):
-  def __init__(self, min, max):
-    self.min = min
-    self.max = max
-    if(isinstance(min , list)):
-       self.length = [max[i]-min[i] for i in range(len(min))]
-    else:
-      self.length = max - min
+# Checks if a real value x is in the interval [min,max]
+def feasibleR(min, max, x):
+  return min <= x <= max
 
-  # Produces one random BitArray of length D
-  def getone(self):
-    if(isinstance(self.min , list)):
-      return [self.min[i] + rand.random()*self.length[i] for i in range(len(self.min))]
-    return self.min + rand.random()*self.length
+# Checks if a real vector x is in the hyperrectangle [min,max]
+def feasibleRn(min, max, x):
+  for i in range(len(x)):
+    if(not (min[i] <= x[i] <= max[i])):
+        return False
+  return True
 
-  # Determines if a candidate solution is feasible
-  def feasible(self, x):
-    if(isinstance(self.min , list)):
-      for i in range(len(x)):
-        if(not (self.min[i] <= x[i] <= self.max[i])):
-            return False
-    return self.min <= x <= self.max
+# Gets a real in the interval [min,max]
+def getR(min, length):
+  return min + rand.random()*length
 
+# Gets a real vector in the hyperrectangle [min,max]
+def getRn(min, length):
+  return [min[i] + rand.random()*length[i] for i in range(len(min))]
 
-# Guassian number generation
+# Creates a real vector interval/hyperrectangle (according to D and values min and max) as search space
+def RealSpace(min, max, D=0):
+  if(D>1):
+    min = [min for i in range(D)]
+    max = [max for i in range(D)]
+  if(isinstance(min , list)):
+    length = [max[i]-min[i] for i in range(len(min))]
+    g = lambda: getRn(min, length)
+    space = SPACE(g, lambda N: simplegetN(N,g), lambda x: feasibleRn(min, max, x))
+    space['D'] = len(min)
+  else:
+    length = max - min
+    g = lambda: getR(min, length)
+    space = SPACE(g, lambda N: simplegetN(N,g), lambda x: feasibleR(min, max, x))
+    space['D'] = 1
+  return space
+
+# Gaussian number generation
 def gaussian(sigma=1.0): return rand.gauss(sigma)
 
 # Power law number generation
@@ -46,36 +76,25 @@ def intensity_mutation(x, mutation, p):
     if( randbool(p) ): y[i] = mutation(y[i]) 
   return y
 
-# Gaussian Mutation
-def gaussianMutation( x, sigma, space ):
-  if( isinstance(x, list) ):
-    y = x.copy()
-    i = rand.randint(0,len(x)-1)
-    y[i] += gaussian(sigma) # = [z + gaussian(sigma) for z in x]
-    return y if space.feasible(y) else x
+# Gaussian Mutation for real numbers
+def gaussianMutationR( x, sigma, feasible ):
   y = x + gaussian(sigma)
-  return y if space.feasible(y) else x
+  return y if feasible(y) else x
 
-# A lambda version for using in SGoals requiring one argument variations
-def lambdaGaussianMutation(sigma, space):
-   return lambda x: gaussianMutation(x, sigma, space)
+# Gaussian Mutation for real vectors
+def gaussianMutationRn( x, sigma, feasible ):
+  y = x.copy()
+  i = rand.randint(0,len(x)-1)
+  y[i] += gaussian(sigma) # = [z + gaussian(sigma) for z in x]
+  return y if feasible(y) else x
 
-# A lambda version for using in SGoals requiring one argument variations
-def lambdaOneGaussianMutation(space):
-   return lambda x, sigma: gaussianMutation(x, sigma, space)
+# Gaussian Mutation for real vectors spaces
+def gaussianMutation(sgoal):
+  D = sgoal['D']
+  if( D==1 ): return lambda x: gaussianMutationR(x, 0.2, sgoal['feasible'])
+  return lambda x: gaussianMutationRn(x, 0.2, sgoal['feasible'])
 
-# Powerlaw Mutation
-def powerlawMutation( x, space ):
-  if( isinstance(x, list) ):
-    y = [z + (1 if randbool() else -1)*powerlaw() for z in x]
-    return y if space.feasible(y) else x
-  y = x + powerlaw()
-  return y if space.feasible(y) else x
 
-# A lambda version for using in SGoals requiring one argument variations
-def lambdaPowerlawMutation(space):
-   return lambda x: powerlawMutation(x, space)
-   
 #################### TEST FUNCTIONS ##############
 # Sphere function
 def sphere_1(x):
@@ -128,15 +147,12 @@ def rosenbrock_saddle( x ):
   return f
 
 ##################### TEST PROBLEMS ####################
-def RealProblem(f, D):
-  if(f=='Rastrigin'):
-    return {'f':rastrigin, 'space': RealSpace([-5.12 for i in range(D)],[5.12 for i in range(D)]), 'optimum':0.0, 'type':'min'}
-  if(f=='Schwefel'):
-    return {'f':schwefel, 'space': RealSpace([-500.0 for i in range(D)],[500.0 for i in range(D)]), 'optimum':0.0, 'type':'min'}
-  if(f=='Griewank'):
-    return {'f':griewank, 'space': RealSpace([-600.0 for i in range(D)],[600.0 for i in range(D)]), 'optimum':0.0, 'type':'min'}
-  if(f=='Rosenbrock'):
-    return {'f':rosenbrock_saddle, 'space': RealSpace([-2.048 for i in range(D)],[2.048 for i in range(D)]), 'optimum':0.0, 'type':'min'}
-  if(f=='Sphere'):
-    return {'f':sphere, 'space':  RealSpace([-5.12 for i in range(D)],[5.12 for i in range(D)]), 'optimum':0.0, 'type':'min'}
-  return {'f':sphere, 'space':  RealSpace([-5.12 for i in range(D)],[5.12 for i in range(D)]), 'optimum':0.0, 'type':'min'}
+def RealTestProblem(f, D, EVALS, TRACE=False):
+  if(f=='Rastrigin'): problem = PROBLEM('min', rastrigin, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
+  elif(f=='Schwefel'): problem = PROBLEM('min', schwefel, RealSpace(-500.0, 500.0, D), EVALS, TRACE)
+  elif(f=='Griewank'): problem = PROBLEM('min', griewank, RealSpace(-600.0, 600.0, D), EVALS, TRACE)
+  elif(f=='Rosenbrock'): problem = PROBLEM('min', rosenbrock_saddle, RealSpace(-2.048, 2.048, D), EVALS, TRACE)
+  if(f=='Sphere'): problem = PROBLEM('min', sphere, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
+  else: problem = PROBLEM('min', sphere, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
+  problem['optimum'] = 0.0
+  return problem

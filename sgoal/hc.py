@@ -17,46 +17,30 @@
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from sgoal.core import SGoal
-from sgoal.core import basicInitPop
-from sgoal.core import basicStop
+from sgoal.core import VRSGoal
 from sgoal.binary import bitmutation
 from sgoal.binary import singlebitmutation
-from sgoal.real import lambdaGaussianMutation
-from sgoal.gabo import initPopGABO2
+from sgoal.real import gaussianMutation
 
-# Next individual of the Hill Climbing Algorithm (nextPop in terms of SGoal)
-def nextHC(P, fP, sgoal):
-  y = sgoal.variation(P)
-  fy = sgoal.evalone(y)
-  P, fP, y, fy = sgoal.pick(P, fP, y, fy)
-  return P, fP
-
-# Classical Hill Climbing Algorithm with neutral mutations
+############### BINARY HILL  CLIMBING ###############
+# Classical Hill Climbing Algorithm with neutral mutation for BitArray problems. Uses bitmutation as variation operator
 # problem: Problem to solve
-# variation: Variation operator
-# initPop: Process for generting the initial population (by default uses the BitArraySpace generation method)
-# stop: Stopping criteria (by default uses the basic stopping criteria)
-class HC(SGoal):
-  def __init__(self, problem, variation, initPop=basicInitPop, stop=basicStop):
-    SGoal.__init__(self, problem, nextHC, initPop, stop=basicStop)
-    self.variation = variation
-
-# Classical Hill Climbing Algorithm for BitArray problems. Uses bitmutation as variation operator
-# problem: Problem to solve
-def BitArrayHC(problem): return HC(problem, bitmutation)
-
-# Classical Hill Climbing Algorithm for Real problems. Uses Gaussian mutation with sigma=0.2 as variation operator
-# problem: Problem to solve
-def RealHC(problem): return HC(problem, lambdaGaussianMutation(0.2, problem['space']))
-
+def BinaryHC(problem): 
+  if( 'variation' not in problem ): problem['variation'] = bitmutation 
+  return VRSGoal(problem)
 
 # The HC algorithm suggested by Richard Palmer, that Forrest and
 # Mitchell named as "random mutation hill-climbing" (RMHC), see
 # M. Mitchell and J. Holland, “When will a genetic algorithm outperform hill-climbing?”
 # Santa Fe Institute, Working Papers, 01 1993.
 # problem: Problem to solve
-def RMHC(problem): return HC(problem, singlebitmutation)
+def RMHC(problem): 
+  if('variation' not in problem): problem['variation'] = singlebitmutation 
+  return VRSGoal(problem)
 
-
-def RMHC_G(problem): return HC(problem, singlebitmutation, initPopGABO2)
+############### REAL HILL  CLIMBING ###############
+# Classical Hill Climbing Algorithm for Real problems. Uses Gaussian mutation with sigma=0.2 as variation operator
+# problem: Problem to solve
+def RealHC(problem): 
+  if( 'variation' not in problem ): problem['variation'] = gaussianMutation(problem['feasible'])
+  return VRSGoal(problem) 

@@ -25,7 +25,8 @@
 # (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from sgoal.core import SGoal
+from sgoal.core import VRSGoal
+from sgoal.core import evalPop
 from sgoal.binary import complement
 
 
@@ -38,63 +39,43 @@ from sgoal.binary import complement
 # Our generalization allows to check a good 1-schema after some CHECK evaluations
 # instead of checing it at the end of the allowed number of fitness evaluations
 # f: Function to be optimized
-def nextPopGGS1(P, fP, sgoal):
-  if(sgoal.check == -1): 
-    sgoal.check = sgoal.evals
-  if((sgoal.count+sgoal.delta)%sgoal.check != 0):
-    y = sgoal.space.get(1)
-    return y, sgoal.evalone(y)
+def variationGS1(x, fx, sgoal):
+  f, getN, minimize = sgoal['f'], sgoal['getN'], sgoal['minimize']
+  
+  N = sgoal['EVALS'] - 1
+  S1 = getN(N)
+  fS1 = evalPop(S1, f)
+  S1.append(x)
+  fS1.append(fx)
 
 # Computes schemata information
-  M = len(sgoal.S1)
-  D = sgoal.space.D
+  M = len(S1)
+  D = sgoal['D']
   C = [[0 for k in range(D)], [0 for k in range(D)]]
   fH = [[0 for k in range(D)], [0 for k in range(D)]]
   for k in range(D):
     for i in range(M):
-      fH[sgoal.S1[i][k]][k] += sgoal.fS1[i]
-      C[sgoal.S1[i][k]][k] += 1
+      fH[S1[i][k]][k] += fS1[i]
+      C[S1[i][k]][k] += 1
   # Generates a candidate solution with the best genes
   y = []
-  for k in range(D):
-    if( sgoal.minimize ):
+  if( minimize ):
+    for k in range(D):
       y.append( 1 if(fH[1][k]/C[1][k] < fH[0][k]/C[0][k]) else 0 )
-    else:
+  else:
+    for k in range(D):
       y.append( 1 if(fH[1][k]/C[1][k] > fH[0][k]/C[0][k]) else 0 )
-  fy = SGoal.evalone(sgoal, y)
+  fy = f(y)
   return y, fy
-
-# Chunks Global Search Algorithm. Computes GGS1 every CHECK function evaluations
-# problem: Problem to solve
-# CHECK: Function evaluations for computing 'the best so far' solution
-class GGS1(SGoal):
-  def __init__(self, problem, CHECK):
-    SGoal.__init__(self, problem, nextPopGGS1)
-    self.S1 = []
-    self.fS1 = []
-    self.N = 1
-    self.check = CHECK
-    self.delta = 1
-
-  # Evals one candidate solution
-  def evalone(self, x):
-    fx = SGoal.evalone(self, x)
-    self.S1.append(x)
-    self.fS1.append(fx)
-    return fx
-
 
 # Global Search Algorithm 
 # problem: Problem to solve
-def GS1(problem): return GGS1(problem, -1)
-
-# Chunks Global Search Algorithm. Computes GS1 every D function evaluations
-# problem: Problem to solve
-def DGS1(problem): return GGS1(problem, problem['space'].D)
+def GS1(problem):
+  problem['next'] = lambda x, fx: variationGS1(x, fx, problem)
+  return VRSGoal(problem)
 
 
-# A Generalization of The Global Search Algorithm with complement propossed by 
-# G. Venturini 1995
+# The Global Search Algorithm with complement propossed by G. Venturini 1995
 # Applies the GS1 and compares the obtained solution with its complement and the
 # best candidate solution of the S1 set (same as the best solution found), see
 # G. Venturini, “Ga consistently deceptive functions are not challenging problems”
@@ -105,25 +86,17 @@ def DGS1(problem): return GGS1(problem, problem['space'].D)
 # evals: Maximum number of fitness evaluations
 # x: Initial point, a random point. It is required for defining the dimension of the space
 # fx: f value at point x (if provided)
-def nextPopGGSC1(P, fP, sgoal):
-    y, fy = nextPopGGS1(P, fP, sgoal)
-    if((sgoal.count+1)%sgoal.check == 0):
-      y = complement(sgoal.result['x'])
-      fy = SGoal.evalone(sgoal, y)
-    return y, fy
+def variationGSC1(x, fx, sgoal):
+  sgoal['EVALS']-=1
+  y, fy = variationGS1(x, fx, sgoal)
+  x, fx = sgoal['best']['x'], sgoal['best']['f']
+  sgoal['EVALS']+=1
+  y = complement(x)
+  fy = sgoal['f'](y)
+  return y, fy
 
-# Chunks Global Search Algorithm with complement. Computes GGSC1 every CHECK function evaluations
+# Global Search Algorithm with complement.
 # problem: Problem to solve
-# CHECK: Function evaluations for computing 'the best so far' solution
-def GGSC1(problem, CHECK):
-    sgoal = GGS1(problem, CHECK)
-    sgoal.delta = 2
-    return sgoal
-
-# Global Search Algorithm with complement. Computes GGSC1 every D function evaluations
-# problem: Problem to solve
-def GSC1(problem): return GGSC1(problem, -1)
-
-# Chunks Global Search Algorithm with COmplement. Computes GS1 every D function evaluations
-# problem: Problem to solve
-def DGSC1(problem): return GGSC1(problem, problem['space'].D)
+def GSC1(problem):
+  problem['next'] = lambda x, fx : variationGSC1(x, fx, problem)
+  return GS1(problem)

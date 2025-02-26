@@ -23,19 +23,20 @@
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from sgoal.core import SGoal
-from sgoal.core import normalize
+from sgoal.core import caneval
+from sgoal.core import SPSGoal
+from sgoal.core import PopSGoal
+from sgoal.util import normalize
 from sgoal.core import transposition
-from sgoal.core import weighted
-from sgoal.core import arity
-from sgoal.core import tournament
-from sgoal.core import basicInitPop
-from sgoal.core import basicStop
-from sgoal.core import tournament
+from sgoal.select import weighted
+from sgoal.util import arity
+from sgoal.select import min_tournament
+from sgoal.select import max_tournament
+from sgoal.core import initPop
+from sgoal.core import init
 from sgoal.core import simplexover
 from sgoal.binary import bitmutation
-from sgoal.real import lambdaGaussianMutation
-from sgoal.gabo import initPopGABO2N
+from sgoal.real import gaussianMutation
 
 import random as rand
   
@@ -43,106 +44,146 @@ import random as rand
 
 # Init Rates for an individual (M operators)
 def initRates(M):
-  rate = []
-  for i in range(0,M):
-    rate.append(rand.random())
-    while rate[i] == 0:
-      rate[i] = rand.random()
+  return [1/M for i in range(M)]
+
+# Determines if the fitness of the second individual is better than the fitness of the first one
+def min_improves(fx, fy):
+  return fy<fx
+
+def max_improves(fx, fy):
+  return fy>fx
+
+# Update rates
+def updateRates(improves, h, rate):
+  delta = rand.random()
+  if(improves): 
+    rate[h] *= (1.0+delta)
+  else: 
+    rate[h] *= (1.0-delta)
   return normalize(rate)
+
+# Trace rates
+def tracerates(rates, trace):
+  if( trace == None): return
+
+  if('rates' not in trace):
+    trace['rates'] = []
+  r = rates[0].copy()
+  for i in range(1, len(rates)):
+    for k in range(len(r)):
+      r[k] += rates[i][k]
+  for k in range(len(r)):
+    r[k] /= len(rates)
+  trace['rates'].append(r)
 
 # CHAVELA Inits Population: Generates a population (N individuals) following an inner 
 # population generation process (by default the space population generation)
 # and associates operator rates to each individual (M operators)
-def initPopCHAVELA(sgoal):
-  P, fP = sgoal.innerInit(sgoal)
-  M = len(sgoal.operators)
-  sgoal.rates = [initRates(M) for i in range(sgoal.N)]
+def init(sgoal):
+  N = sgoal['N']
+  P, fP = sgoal['innerInit'](sgoal)
+  M = len(sgoal['operators'])
+  sgoal['rates'] = [initRates(M) for i in range(N)]
+  tracerates(sgoal['rates'], sgoal['trace'])
   return P, fP
 
 # CHAVELA next population method
-def nextPopCHAVELA(P, fP, sgoal):
+def next(P, fP, sgoal):
+  f, minimize, operators, pick, N, rates = sgoal['f'], sgoal['minimize'], sgoal['operators'], sgoal['pick'], sgoal['N'], sgoal['rates']
+  if(minimize): 
+    tournament = min_tournament
+    improves = min_improves
+  else: 
+    tournament = max_tournament
+    improves = max_improves
   Q = []
   fQ = []
   rQ = []
-  for i in range(sgoal.N):
-    if(sgoal.caneval()):
-      parents = [P[i]]
-      h = weighted(sgoal.rates[i])
-      a = arity(sgoal.operators[h]) 
+  for i in range(N):
+    if(caneval(sgoal)):
+      h = weighted(rates[i])
+      a = arity(operators[h]) 
       if a > 1: 
-        idxparents = tournament(fP,a-1, sgoal.minimize)
+        parents = [P[i]]
+        idxparents = tournament(fP,a-1)
         for k in idxparents:
           parents.append(P[k])     
-        candidates = sgoal.operators[h](*parents)
-        c = candidates[rand.randint(0,len(candidates)-1)]
+        c = operators[h](*parents)[0]
       else: 
-        c = sgoal.operators[h](parents[0])     
-      fc = sgoal.evalone(c)
-      rQ.append(sgoal.updateRates(h, fc, fP[i], sgoal.rates[i]))
-      c, fc, p, fp = sgoal.pick(P[i], fP[i], c, fc)
+        c = operators[h](P[i])
+      fc = f(c)
+      rQ.append(updateRates(improves(fP[i], fc), h, rates[i]))
+      c, fc, p, fp = pick(P[i], fP[i], c, fc)
       Q.append(c)
       fQ.append(fc)
     else:
       Q.append(P[i])
       fQ.append(fP[i])
-      rQ.append(sgoal.rates[i])
-  P, fP, sgoal.rates = Q, fQ, rQ
+      rQ.append(rates[i])
+  P, fP, sgoal['rates'] = Q, fQ, rQ
+  tracerates(sgoal['rates'], sgoal['trace'])
   return P, fP
 
 ############ Canonical HAEA: Chavela ##########
-# problem: Problem to solve
-# config: CHAVELA parameters
-#   N: Number of individuals
-#   operators: A list with the variation operators used by CHAVELA 
-# initPop: Process for generting the initial population (by default uses the BitArraySpace generation method)
-# stop: Stopping criteria (by default uses the basic stopping criteria)
-class CHAVELA(SGoal):
-  def __init__(self, problem, config, initPop=basicInitPop, stop=basicStop):
-    SGoal.__init__(self, problem, nextPopCHAVELA, initPopCHAVELA, stop)
-    self.N = config['N']
-    self.operators = config['operators']
-    self.rates = []
-    self.result['rates'] = []
-    self.innerInit = initPop
+# Extends the Population SGOAL with the following keys:
+#   'rates': operator's rates one by each candidate solution in the population
+#   'operators': A list with the variation operators used by CHAVELA 
+#   'innerInit': Inner Init Population method by default set to initPop from sgoal.core
+def CHAVELA(problem):
+  sgoal = problem
+  if('innerInit' not in sgoal): sgoal['innerInit'] = initPop
+  sgoal['init'] = lambda : init(sgoal)
+  sgoal['next'] = lambda P, fP: next(P, fP, sgoal)
+  sgoal['rates'] = []
+  return PopSGoal(problem)
 
-  # Trace method. Adds rates evolution to the tracing object
-  def tracing(self, P, fP):
-    SGoal.tracing(self, P, fP)
-    if(self.TRACE):
-      self.result['rates'].append(self.rates)
+# Standard CHAVELA for Binary problems. Uses bitmutation, simplexover, and transposition as operators
+def BinaryCHAVELA(problem):
+  if( 'operators' not in problem ): problem['operators'] = [bitmutation, simplexover, transposition]
+  return CHAVELA(problem) 
 
-  # Determines if the fitness of the second individual is better than the fitness of the first one
-  def improves(self, fx, fy):
-    return ((not self.minimize and fy>fx) or (self.minimize and fy<fx))
+# Standard CHAVELA for Real problems. Uses gaussianmutation, simplexover, and transposition as operators
+def RealCHAVELA(problem):
+  if( 'operators' not in problem ): problem['operators'] = [gaussianMutation(problem['feasible']), transposition, simplexover]
+  return CHAVELA(problem) 
 
-  # Update rates
-  def updateRates(self, h, fc, fp, rate):
-    delta = rand.random()
-    if(self.improves(fp,fc)): 
-      rate[h] *= (1.0+delta)
-    else: 
-      rate[h] *= (1.0-delta)
-    return normalize(rate)
-    
-# Standard CHAVELA for BitArray problems
-# problem: BitArray problem to solve
-# N: Population's size. If N<0 then the population's size is set to D//2, with D the length of BitArray
-def BitArrayCHAVELA(problem, N = -1):
-  if(N<0): N = max(100,problem['space'].D//2)
-  return CHAVELA(problem, {'operators':[bitmutation, simplexover, transposition], 'N':N}) 
+############### Single Point CHAVELA ############
+# generates one candidate solution following an inner single point generation strategy
+def init1(sgoal):
+  x, fx = sgoal['innerInit'](sgoal)
+  M = len(sgoal['operators'])
+  sgoal['rates'] = initRates(M)
+  return x, fx
 
-# Standard CHAVELA for Real problems
-# problem: Real problem to solve
-# N: Population's size. If N<0 then the population's size is set to max{D//2, 100}, with D the space dimension
-def RealCHAVELA(problem, N=-1):
-  space = problem['space']
-  if(isinstance(space.min, list)): 
-    D = len(space.min)
-  else:
-    D = 1
-  if(N<0): N = max(D//2,100)
-  return CHAVELA(problem, {'operators':[lambdaGaussianMutation(0.2,space), transposition, simplexover], 'N':N })
+# CHAVELA1 next individual method
+def next1(x, fx, sgoal):
+  f, minimize, operators, pick, rates = sgoal['f'], sgoal['minimize'], sgoal['operators'], sgoal['pick'], sgoal['rates']
+  if(minimize): improves = min_improves
+  else: improves = max_improves
+  if(not caneval(sgoal)): return x, fx
+  h = weighted(rates)
+  c = operators[h](x)
+  fc = f(c)
+  sgoal['rates'] = updateRates(improves(fx,fc), h, rates)
+  x, fx, c, fc = pick(x, fx, c, fc)
+  if('tracerates' in sgoal and sgoal['tracerates']): 
+    sgoal['tracerates'](sgoal)    
+  return x, fx
 
-def CHAVELA_G(problem, N=-1):
-  if(N<0): N = max(100,problem['space'].D//2)
-  return CHAVELA(problem, {'operators':[bitmutation, simplexover, transposition], 'N':N}, initPopGABO2N) 
+
+############ Single point CHAVELA ##########
+# Extends the Single Point SGOAL with the following keys:
+#   'rates': operator's rates one for the candidate solution
+#   'operators': A list with the variation operators used by CHAVELA 
+#   'innerInit': Inner Init candidate solution method by default set to init from sgoal.core
+def CHAVELA1(problem):
+  if('innerInit' not in problem): problem['innerInit'] = init
+  problem['init'] = lambda: init1(problem)
+  problem['next'] = lambda x, fx: next1(x, fx, problem)
+  problem['rates'] = []
+  return SPSGoal(problem)
+       
+# Standard CHAVELA1 for Binary problems
+def BinaryCHAVELA1(problem):
+  if( 'operators' not in problem ): problem['operators'] = [bitmutation, transposition]
+  return CHAVELA(problem) 

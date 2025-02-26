@@ -18,61 +18,66 @@
 # (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from sgoal.core import SGoal
-from sgoal.core import basicInitPop
-from sgoal.core import basicStop
-from sgoal.binary import bitmutationprob
-from sgoal.real import lambdaOneGaussianMutation
+from sgoal.core import SPSGoal
 
-# Next popuation methof of a 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule
-def nextPopR1_5(P, fP, sgoal):
-  y = sgoal.mutation(P, sgoal.mr)
-  fy = sgoal.evalone(y)
-  w = P
-  P, fP, y, fy = sgoal.pick( P, fP, y, fy )
-  sgoal.I += 1
-  if( w==y ): sgoal.Gs += 1
-  if( sgoal.I==sgoal.G ):
-    p = sgoal.Gs/sgoal.G
-    if( p > 0.2 ): sgoal.mr /= sgoal.a
-    elif( p < 0.2 ): sgoal.mr *= sgoal.a
-    sgoal.Gs = 0
-    sgoal.I = 0    
-  return P, fP
+from sgoal.binary import bitmutationprob
+from sgoal.real import gaussianMutationR
+from sgoal.real import gaussianMutationRn
+
+# Replace method of a 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule
+def ReplaceR1_5(x, fx, y, fy, sgoal):
+  w = x
+  x, fx, y, fy = sgoal['pick']( x, fx, y, fy )
+  sgoal['I'] += 1
+  if( w==y ): sgoal['Gs'] += 1
+  if( sgoal['I']==sgoal['G'] ):
+    p = sgoal['Gs']/sgoal['G']
+    if( p > 0.2 ): sgoal['mr'] /= sgoal['a']
+    elif( p < 0.2 ): sgoal['mr'] *= sgoal['a']
+    sgoal['Gs'] = 0
+    sgoal['I'] = 0
+    sgoal['variation'] = lambda x: sgoal['mutation'](x, sgoal['mr'])
+  return x, fx
 
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
 # Beyer, Hans-Georg & Schwefel, Hans-Paul. (2002). Evolution strategies - A comprehensive introduction. 
 # Natural Computing. 1. 3-52. 10.1023/A:1015059928466. 
-# problem: Problem to solve
-# config: Rule 1/5th parameters
-#   G: Checking evaluations for adapting the mutation rate
-#   a: Scaling factor of the mutation rate
-#   mutation: A mutation operation with the possibility of setting its rate
-#   mr: Initial mutation rate
-class Rule_1_5th(SGoal):
-  def __init__(self, problem, config, initPop=basicInitPop, stop=basicStop):
-    SGoal.__init__(self, problem, nextPopR1_5, initPop, stop)
-    self.G = config['G']
-    self.a = config['a']
-    self.mr = config['mr']
-    self.mutation = config['mutation']
-    self.I = 1
-    self.Gs = 1
+# Extend the problem wit Rule 1/5th parameters
+#   'G': Checking evaluations for adapting the mutation rate
+#   'a': Scaling factor of the mutation rate
+#   'mutation': A mutation operation with the possibility of setting its rate
+#   'mr': Initial mutation rate
+def Rule_1_5th(problem):
+  if( 'a' not in problem ): problem['a'] = 0.9
+  problem['I'] = 1
+  problem['Gs'] = 1
+  problem['variation'] = lambda x: problem['mutation'](x, problem['mr'])
+  problem['replace'] = lambda x, fx, y, fy: ReplaceR1_5(x, fx, y, fy, problem)
+  return SPSGoal(problem)
 
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, for BitArray
 # problem: Problem to solve
 def BitArrayR1_5(problem):
-  D = problem['space'].D
-  return Rule_1_5th(problem, {'mr':1/D, 'mutation': bitmutationprob, 'G':D, 'a':0.9}) 
+  D = problem['D']
+  if( 'mr' not in problem ): problem['mr'] = 1/D
+  if( 'mutation' not in problem ): problem['mutation'] = bitmutationprob
+  if( 'G' not in problem ): problem['G'] = D
+  return Rule_1_5th(problem)
 
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations (Gaussian Mutation sigma=0.2) and 1/5th rule, for real
 # problem: Problem to solve
 def RealR1_5(problem):
-  space = problem['space']
-  D = len(space.min) if isinstance(space.min, list) else 1
-  return Rule_1_5th(problem, {'mr':1/D, 'mutation': lambdaOneGaussianMutation(space), 'G':D, 'a':0.9}) 
+  D = problem['D']
+  if( 'mr' not in problem ): problem['mr'] = 1/D
+  if( 'mutation' not in problem ):
+    if( D==1 ):
+      problem['mutation'] = lambda x, mr: gaussianMutationR(x, mr, problem['feasible'])
+    else:
+      problem['mutation'] = lambda x, mr: gaussianMutationRn(x, mr, problem['feasible'])
+  if( 'G' not in problem ): problem['G'] = D
+  return Rule_1_5th(problem)
 
-
+##### WORK IN PROGRESS ######
 
 #def es(f, evals, mutation, marriage, mutation_s, marriage_s, _mu, _lambda, plus, _rho, P, fP=None):
 #  if( evals >= len(P) and not fP ):
