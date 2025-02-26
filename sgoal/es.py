@@ -18,7 +18,7 @@
 # (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
 # HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from sgoal.core import SPSGoal
+from sgoal.core import VRSGoal
 
 from sgoal.binary import bitmutationprob
 from sgoal.real import gaussianMutationR
@@ -53,7 +53,7 @@ def Rule_1_5th(problem):
   problem['Gs'] = 1
   problem['variation'] = lambda x: problem['mutation'](x, problem['mr'])
   problem['replace'] = lambda x, fx, y, fy: ReplaceR1_5(x, fx, y, fy, problem)
-  return SPSGoal(problem)
+  return VRSGoal(problem)
 
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, for BitArray
 # problem: Problem to solve
