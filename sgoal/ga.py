@@ -86,7 +86,7 @@ def nextGGA(P, fP, sgoal):
 # initPop: Process for generating the initial population (by default uses the BitArraySpace generation method)
 # stop: Stopping criteria (by default uses the basic stopping criteria)
 def GGA(problem):
-  problem['next'] = nextGGA
+  problem['next'] = lambda P, fP: nextGGA(P, fP, problem)
   return GA(problem)
 
 ############### Steady State Genetic Algorithm - GGA ################
@@ -112,7 +112,7 @@ def nextSSGA(P, fP, sgoal):
 # initPop: Process for generating the initial population (by default uses the BitArraySpace generation method)
 # stop: Stopping criteria (by default uses the basic stopping criteria)
 def SSGA(problem):
-  problem['next'] = nextSSGA
+  problem['next'] = lambda P, fP: nextSSGA(P, fP, problem)
   return GA(problem)
 
 ############# Binary versions ##############
