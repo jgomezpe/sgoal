@@ -185,13 +185,28 @@ def rosenbrock_saddle( x ):
     f += rosenbrock_saddle_2( x[i], x[i+1] )
   return f
 
+def ackley( x ):
+  D = len(x)
+  e = math.exp(1)
+  a = 20
+  b = 0.2
+  c = 2*math.pi
+  s = a + e
+  p = 0
+  q = 0
+  for y in x:
+    p += y*y
+    q += math.cos(c*y)
+  return -a*math.exp(-b*(p/D)**0.5) - math.exp(q/D)
+
 ##################### TEST PROBLEMS ####################
 def RealTestProblem(f, D, EVALS, TRACE=False):
   if(f=='Rastrigin'): problem = PROBLEM('min', rastrigin, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
   elif(f=='Schwefel'): problem = PROBLEM('min', schwefel, RealSpace(-500.0, 500.0, D), EVALS, TRACE)
   elif(f=='Griewank'): problem = PROBLEM('min', griewank, RealSpace(-600.0, 600.0, D), EVALS, TRACE)
   elif(f=='Rosenbrock'): problem = PROBLEM('min', rosenbrock_saddle, RealSpace(-2.048, 2.048, D), EVALS, TRACE)
-  if(f=='Sphere'): problem = PROBLEM('min', sphere, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
+  elif(f=='Ackley'): problem = PROBLEM('min', ackley, RealSpace(-32.768, 32.768, D), EVALS, TRACE)
+  elif(f=='Sphere'): problem = PROBLEM('min', sphere, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
   else: problem = PROBLEM('min', sphere, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
   problem['optimum'] = 0.0
   return problem
@@ -202,7 +217,8 @@ def Real2BinaryTestProblem(f, D, EVALS, BITSIZE = 32, TRACE=False):
   elif(f=='Schwefel'): problem = Real2BinaryPROBLEM('min', schwefel, Real2Binary(-500.0, 500.0, D, BITSIZE), EVALS, TRACE)
   elif(f=='Griewank'): problem = Real2BinaryPROBLEM('min', griewank, Real2Binary(-600.0, 600.0, D, BITSIZE), EVALS, TRACE)
   elif(f=='Rosenbrock'): problem = Real2BinaryPROBLEM('min', rosenbrock_saddle, Real2Binary(-2.048, 2.048, D, BITSIZE), EVALS, TRACE)
-  if(f=='Sphere'): problem = Real2BinaryPROBLEM('min', sphere, Real2Binary(-5.12, 5.12, D, BITSIZE), EVALS, TRACE)
+  elif(f=='Ackley'): problem = Real2BinaryPROBLEM('min', ackley, Real2Binary(-32.768, 32.768, D, BITSIZE), EVALS, TRACE)
+  elif(f=='Sphere'): problem = Real2BinaryPROBLEM('min', sphere, Real2Binary(-5.12, 5.12, D, BITSIZE), EVALS, TRACE)
   else: problem = Real2BinaryPROBLEM('min', sphere, Real2Binary(-5.12, 5.12, D, BITSIZE), EVALS, TRACE)
   problem['optimum'] = 0.0
   return problem
