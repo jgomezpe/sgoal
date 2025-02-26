@@ -57,7 +57,7 @@ def PROBLEM(type, f, space, EVALS, TRACE=False):
   space['minimize'] = type=='min'
   if(space['minimize']): space['pick'] = min_pick
   else: space['pick'] = max_pick
-  if(TRACE): space['trace'] = {'f':[], 'fP':[]}
+  if(TRACE): space['trace'] = {'f':[], 'fP':[], 'best':[]}
   else: space['trace'] = None
   return space
 
@@ -104,12 +104,15 @@ def rec(x, fx, sgoal):
 
   if('best' not in sgoal):
     sgoal['best'] ={'x':x, 'f':fx, 'evals':sgoal['count']}
+    best = sgoal['best']
   else:
     best = sgoal['best']
     best['x'], best['f'], b, fb = sgoal['pick'](best['x'], best['f'], x, fx)
     if(best['f'] != fb and fx != fb): best['evals'] = sgoal['count']
 
-  if(sgoal['trace'] != None): sgoal['trace']['f'].append(fx)
+  if(sgoal['trace'] != None): 
+    sgoal['trace']['f'].append(fx)
+    sgoal['trace']['best'].append(best['f'])
 
 # Evaluates the objective function in a candidate solution (traces information)
 def eval(x, f, sgoal):
