@@ -257,7 +257,7 @@ def PopSGoal(problem):
 def experiment(sgoal, problem, R=100):
   r = []
   for k in range(R):
-    p = problem()
+    p = problem(k)
     opt = p['optimum'] if 'optimum' in p else None
     alg = sgoal(p)
     r.append(run(alg))  
