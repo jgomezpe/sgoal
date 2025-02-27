@@ -197,7 +197,7 @@ def ackley( x ):
   for y in x:
     p += y*y
     q += math.cos(c*y)
-  return -a*math.exp(-b*(p/D)**0.5) - math.exp(q/D)
+  return s-a*math.exp(-b*(p/D)**0.5) - math.exp(q/D)
 
 ##################### TEST PROBLEMS ####################
 def RealTestProblem(f, D, EVALS, TRACE=False):
