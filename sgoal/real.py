@@ -157,7 +157,7 @@ def rastrigin( x ):
 
 # Schwefel Function
 def schwefel_1( x ):
-	return -x * math.sin(math.sqrt(math.abs(x)))
+	return -x * math.sin(math.sqrt(abs(x)))
 
 def schwefel( x ):
   f = 0.0
