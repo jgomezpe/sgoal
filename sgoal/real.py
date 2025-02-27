@@ -162,7 +162,7 @@ def schwefel_1( x ):
 def schwefel( x ):
   f = 0.0
   for c in x:
-    f += schwefel(c)
+    f += schwefel_1(c)
   return (418.9829101*len(x) + f)
 
 # Griewangk function
