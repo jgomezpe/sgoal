@@ -80,22 +80,24 @@ def intensity_mutation(x, mutation, p):
   return y
 
 # Gaussian Mutation for real numbers
-def gaussianMutationR( x, sigma, feasible ):
+def gaussianMutationR( x, sgoal ):
+  sigma = sgoal['RSLENGTH']/100
   y = x + gaussian(sigma)
-  return y if feasible(y) else x
+  return y if sgoal['feasible'](y) else x
 
 # Gaussian Mutation for real vectors
-def gaussianMutationRn( x, sigma, feasible ):
+def gaussianMutationRn( x, sgoal ):
   y = x.copy()
   i = rand.randint(0,len(x)-1)
+  sigma = sgoal['RSLENGTH'][i]/100
   y[i] += gaussian(sigma) # = [z + gaussian(sigma) for z in x]
-  return y if feasible(y) else x
+  return y if sgoal['feasible'](y) else x
 
 # Gaussian Mutation for real vectors spaces
 def gaussianMutation(sgoal):
   D = sgoal['D']
-  if( D==1 ): return lambda x: gaussianMutationR(x, 0.2, sgoal['feasible'])
-  return lambda x: gaussianMutationRn(x, 0.2, sgoal['feasible'])
+  if( D==1 ): return lambda x: gaussianMutationR(x, sgoal)
+  return lambda x: gaussianMutationRn(x, sgoal)
 
 
 ##################### REAL TO BINARY #####################

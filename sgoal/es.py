@@ -21,8 +21,8 @@
 from sgoal.core import VRSGoal
 
 from sgoal.binary import bitmutationprob
-from sgoal.real import gaussianMutationR
-from sgoal.real import gaussianMutationRn
+from sgoal.real import gaussian
+import random as rand
 
 # Replace method of a 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule
 def variation(x, fx, sgoal):
@@ -70,6 +70,19 @@ def BitArrayR1_5(problem):
 
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations (Gaussian Mutation sigma=0.2) and 1/5th rule, for real
 # problem: Problem to solve
+# Gaussian Mutation for real numbers
+def gaussianMutationR( x, sigma, feasible ):
+  y = x + gaussian(sigma)
+  return y if feasible(y) else x
+
+# Gaussian Mutation for real vectors
+def gaussianMutationRn( x, sigma, feasible ):
+  y = x.copy()
+  i = rand.randint(0,len(x)-1)
+  y[i] += gaussian(sigma) # = [z + gaussian(sigma) for z in x]
+  return y if feasible(y) else x
+
+
 def RealR1_5(problem):
   D = problem['D']
   if( 'mr' not in problem ): problem['mr'] = 1/D
