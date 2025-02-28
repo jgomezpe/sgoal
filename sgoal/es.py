@@ -20,16 +20,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from sgoal.core import VRSGoal
 
-from sgoal.binary import bitmutationprob
-from sgoal.real import gaussian
-import random as rand
-
 # Replace method of a 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule
-def variation(x, fx, sgoal):
-  y = sgoal['mutation'](x, sgoal['mr'])
-  fy = sgoal['f'](y)
-  return y, fy
-
 def ReplaceR1_5(x, fx, y, fy, sgoal):
   w = x
   x, fx, y, fy = sgoal['pick']( x, fx, y, fy )
@@ -37,8 +28,9 @@ def ReplaceR1_5(x, fx, y, fy, sgoal):
   if( w==y ): sgoal['Gs'] += 1
   if( sgoal['I']==sgoal['G'] ):
     p = sgoal['Gs']/sgoal['G']
-    if( p > 0.2 ): sgoal['mr'] /= sgoal['a']
-    elif( p < 0.2 ): sgoal['mr'] *= sgoal['a']
+    if( p > 0.2 ): sgoal['parameter'] /= sgoal['a']
+    elif( p < 0.2 ): sgoal['parameter'] *= sgoal['a']
+    sgoal['scaleparameter']()
     sgoal['Gs'] = 0
     sgoal['I'] = 0
   return x, fx
@@ -51,48 +43,15 @@ def ReplaceR1_5(x, fx, y, fy, sgoal):
 #   'a': Scaling factor of the mutation rate
 #   'mutation': A mutation operation with the possibility of setting its rate
 #   'mr': Initial mutation rate
-def Rule_1_5th(problem):
+def Rule1_5_T(problem):
   if( 'a' not in problem ): problem['a'] = 0.9
   problem['I'] = 1
   problem['Gs'] = 1
-  problem['variation'] = lambda x, fx: variation(x, fx, problem)
   problem['replace'] = lambda x, fx, y, fy: ReplaceR1_5(x, fx, y, fy, problem)
   return VRSGoal(problem)
 
-# 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, for BitArray
-# problem: Problem to solve
-def BitArrayR1_5(problem):
-  D = problem['D']
-  if( 'mr' not in problem ): problem['mr'] = 1/D
-  if( 'mutation' not in problem ): problem['mutation'] = bitmutationprob
-  if( 'G' not in problem ): problem['G'] = D
-  return Rule_1_5th(problem)
-
-# 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations (Gaussian Mutation sigma=0.2) and 1/5th rule, for real
-# problem: Problem to solve
-# Gaussian Mutation for real numbers
-def gaussianMutationR( x, sigma, feasible ):
-  y = x + gaussian(sigma)
-  return y if feasible(y) else x
-
-# Gaussian Mutation for real vectors
-def gaussianMutationRn( x, sigma, feasible ):
-  y = x.copy()
-  i = rand.randint(0,len(x)-1)
-  y[i] += gaussian(sigma) # = [z + gaussian(sigma) for z in x]
-  return y if feasible(y) else x
 
 
-def RealR1_5(problem):
-  D = problem['D']
-  if( 'mr' not in problem ): problem['mr'] = 1/D
-  if( 'mutation' not in problem ):
-    if( D==1 ):
-      problem['mutation'] = lambda x, mr: gaussianMutationR(x, mr, problem['feasible'])
-    else:
-      problem['mutation'] = lambda x, mr: gaussianMutationRn(x, mr, problem['feasible'])
-  if( 'G' not in problem ): problem['G'] = D
-  return Rule_1_5th(problem)
 
 ##### WORK IN PROGRESS ######
 

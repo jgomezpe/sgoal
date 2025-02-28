@@ -1,9 +1,4 @@
-# Stochastic Global Optimization Algorthms (SGoals) library core functions.
-# A formal description is provided by Jonatan Gomez in
-# "Stochastic global optimization algorithms: A systematic formal approach",
-# Information Sciences, Volume 472, 2019, Pages 53-76, ISSN 0020-0255,
-# https://doi.org/10.1016/j.ins.2018.09.021.
-# (https://www.sciencedirect.com/science/article/pii/S0020025517305248)
+# Selection methods.
 # Copyright (c)
 # Authors: Jonatan Gomez and Elizabeth León  
 # E-mails: jgomezpe@unal.edu.co  and eleonguz@unal.edu.co

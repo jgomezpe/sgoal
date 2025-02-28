@@ -21,6 +21,14 @@ import random as rand
 from sgoal.core import SPACE
 from sgoal.core import PROBLEM
 from sgoal.core import randbool
+from sgoal.core import VRSGoal
+from sgoal.core import variation
+from sgoal.core import simplexover
+from sgoal.core import transposition
+from sgoal.es import Rule1_5_T
+from sgoal.ga import SSGA_T
+from sgoal.ga import GGA_T
+from sgoal.chavela import CHAVELA_T
 
 # Fixed Length Binary Space
 # D : Length of the BitArray (Binary string)
@@ -36,7 +44,7 @@ def flip(x, k):
   y[k] = 1 if y[k]==0 else 0
   return y
 
-# Generates the complement ButArray by flipping each bit (creates a new one - hard copy)
+# Generates the complement BitArray by flipping each bit (creates a new one - hard copy)
 def complement(x): return [1 if v==0 else 0 for v in x]
 
 # Single bit mutation: Flips a single bit chosen in a random fashion (creates a new one - hard copy)
@@ -61,6 +69,62 @@ def bitmutationprob(x, p):
 
 # Bit mutation. Flips a bit with probability 1/|x| (creates a new one - hard copy)
 def bitmutation(x): return bitmutationprob(x, 1.0/len(x))
+
+##################### SGOALs ###########################
+# Classical Hill Climbing Algorithm with neutral mutation for BitArray problems. Uses bitmutation as variation operator
+# problem: Problem to solve
+def HC(problem): 
+  if( 'variation' not in problem ): problem['variation'] = bitmutation 
+  return VRSGoal(problem)
+
+# The HC algorithm suggested by Richard Palmer, that Forrest and
+# Mitchell named as "random mutation hill-climbing" (RMHC), see
+# M. Mitchell and J. Holland, “When will a genetic algorithm outperform hill-climbing?”
+# Santa Fe Institute, Working Papers, 01 1993.
+# problem: Problem to solve
+def RMHC(problem): 
+  if('variation' not in problem): problem['variation'] = singlebitmutation 
+  return VRSGoal(problem)
+
+# 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, for BitArray
+# problem: Problem to solve
+def setprob(problem):
+  problem['variation'] = lambda x, fx: variation(x, fx, lambda y: bitmutationprob(y, problem['parameter']), problem)
+  
+# 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
+# Beyer, Hans-Georg & Schwefel, Hans-Paul. (2002). Evolution strategies - A comprehensive introduction. 
+# Natural Computing. 1. 3-52. 10.1023/A:1015059928466. 
+def Rule1_5(problem):
+  D = problem['D']
+  if( 'parameter' not in problem ): problem['parameter'] = 1/D
+  if( 'variation' not in problem ): 
+    problem['setparameter'] = lambda : setprob(problem)
+    setprob(problem)
+  if( 'G' not in problem ): problem['G'] = D
+  return Rule1_5_T(problem)
+
+############### Generational Genetic Algorithm - SSGA ################
+def bmutation(sgoal):
+  if('mutation' not in sgoal): sgoal['mutation'] = bitmutation
+  return sgoal
+
+def GGA(problem):
+  return GGA_T(bmutation(problem))
+
+############### Steady State Genetic Algorithm - SSGA ################
+# problem: Problem to solve
+def SSGA(problem):
+  return SSGA_T(bmutation(problem))
+
+# Standard CHAVELA for Binary problems. Uses bitmutation, simplexover, and transposition as operators
+def CHAVELA(problem):
+  if( 'operators' not in problem ): problem['operators'] = [bitmutation, simplexover, transposition]
+  return CHAVELA_T(problem) 
+
+# Standard CHAVELA1 for Binary problems
+def CHAVELA1(problem):
+  if( 'operators' not in problem ): problem['operators'] = [bitmutation, transposition]
+  return CHAVELA_T(problem) 
 
 ##################### TEST FUNCTIONS #####################
 # Computing the MaxOnes function (sum of bits) from the start bit upto end-1 bit. 
@@ -178,9 +242,8 @@ def mixed2(x, start=0, end=-1):
     start += 40
   return f 
 
-
 ##################### TEST PROBLEMS ####################
-def BinaryTestProblem(f, D, EVALS, TRACE=False):
+def TestProblem(f, D, EVALS, TRACE=False):
   space = Binary(D)
   space['optimum'] = D
   if(f=='MaxOnes'): f = maxones

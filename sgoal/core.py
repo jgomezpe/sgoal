@@ -251,9 +251,9 @@ def PopSGoal(problem):
 
 ############ EXPERIMENT MODE ###########
 # Runs an SGoal in experiment mode. Runs R times the SGoal on the given problem and produces 
-# fx: An array of the best objective function value found by each one of the R runs of the SGoal
-# evals: An array of the objective function evaluations required by the SGoal to achieve such value
-# sr: Success rate. Number of times the SGoal found the optimum value (if available).
+#   fx: An array of the best objective function value found by each one of the R runs of the SGoal
+#   evals: An array of the objective function evaluations required by the SGoal to achieve such value
+#   sr: Success rate. Number of times the SGoal found the optimum value (if available).
 def experiment(sgoal, problem, R=100):
   r = []
   for k in range(R):

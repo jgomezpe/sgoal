@@ -27,16 +27,12 @@ from sgoal.core import caneval
 from sgoal.core import SPSGoal
 from sgoal.core import PopSGoal
 from sgoal.util import normalize
-from sgoal.core import transposition
 from sgoal.select import weighted
 from sgoal.util import arity
 from sgoal.select import min_tournament
 from sgoal.select import max_tournament
 from sgoal.core import initPop
 from sgoal.core import init
-from sgoal.core import simplexover
-from sgoal.binary import bitmutation
-from sgoal.real import gaussianMutation
 
 import random as rand
   
@@ -47,9 +43,11 @@ def initRates(M):
   return [1/M for i in range(M)]
 
 # Determines if the fitness of the second individual is better than the fitness of the first one
+# minimization
 def min_improves(fx, fy):
   return fy<fx
 
+# maximization
 def max_improves(fx, fy):
   return fy>fx
 
@@ -124,28 +122,18 @@ def next(P, fP, sgoal):
   tracerates(sgoal['rates'], sgoal['trace'])
   return P, fP
 
-############ Canonical HAEA: Chavela ##########
+############ Generic Canonical HAEA: Chavela ##########
 # Extends the Population SGOAL with the following keys:
 #   'rates': operator's rates one by each candidate solution in the population
 #   'operators': A list with the variation operators used by CHAVELA 
 #   'innerInit': Inner Init Population method by default set to initPop from sgoal.core
-def CHAVELA(problem):
+def CHAVELA_T(problem):
   sgoal = problem
   if('innerInit' not in sgoal): sgoal['innerInit'] = initPop
   sgoal['init'] = lambda : init(sgoal)
   sgoal['next'] = lambda P, fP: next(P, fP, sgoal)
   sgoal['rates'] = []
   return PopSGoal(problem)
-
-# Standard CHAVELA for Binary problems. Uses bitmutation, simplexover, and transposition as operators
-def BinaryCHAVELA(problem):
-  if( 'operators' not in problem ): problem['operators'] = [bitmutation, simplexover, transposition]
-  return CHAVELA(problem) 
-
-# Standard CHAVELA for Real problems. Uses gaussianmutation, simplexover, and transposition as operators
-def RealCHAVELA(problem):
-  if( 'operators' not in problem ): problem['operators'] = [gaussianMutation(problem), transposition, simplexover]
-  return CHAVELA(problem) 
 
 ############### Single Point CHAVELA ############
 # generates one candidate solution following an inner single point generation strategy
@@ -176,14 +164,9 @@ def next1(x, fx, sgoal):
 #   'rates': operator's rates one for the candidate solution
 #   'operators': A list with the variation operators used by CHAVELA 
 #   'innerInit': Inner Init candidate solution method by default set to init from sgoal.core
-def CHAVELA1(problem):
+def CHAVELA1_T(problem):
   if('innerInit' not in problem): problem['innerInit'] = init
   problem['init'] = lambda: init1(problem)
   problem['next'] = lambda x, fx: next1(x, fx, problem)
   problem['rates'] = []
   return SPSGoal(problem)
-       
-# Standard CHAVELA1 for Binary problems
-def BinaryCHAVELA1(problem):
-  if( 'operators' not in problem ): problem['operators'] = [bitmutation, transposition]
-  return CHAVELA(problem) 

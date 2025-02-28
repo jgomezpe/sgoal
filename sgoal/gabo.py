@@ -24,6 +24,7 @@ from sgoal.core import caneval
 from sgoal.core import SPSGoal
 from sgoal.util import permutation
 from sgoal.binary import multiflip
+from sgoal.binary import complement
 from sgoal.binary import flip
 from sgoal.core import initPop
 from sgoal.core import init
@@ -220,44 +221,27 @@ def GABO(problem):
   sgoal['next'] = lambda x, fx : next(x, fx, sgoal)
   return sgoal
 
-################### GCOIN: Gen COntribution INitialization method (for any SGOAL) using GABO ideas ######################
-# Analyzes coding alleles
-def codingCheck(x, fx, sgoal):
-  f, pick, flip, coding = sgoal['f'], sgoal['pick'], sgoal['flip'], sgoal['coding']
-  if(sgoal['minimize']): C = min_C
-  else: C = max_C
-  P = permutation(len(coding))
-  for i in P:
-    if(not caneval(sgoal)): return x, fx
-    k = coding[i]
-    y, fy = flip(x, fx, k)
-    x, fx, y, fy = pick(x, fx, y, fy)
-    C(x, fx, fy, k, sgoal)
-  return x, fx
-
-# Init a single candidate solution for any Single Point SGoal using GABO2
-def GCOIN(problem):
-  sgoal = GABOConfig(problem)
-  f, pick, multiflip = sgoal['f'], sgoal['pick'], sgoal['multiflip']
-  x, fx = init(sgoal)
-  x, fx = ICSplit(x, fx, sgoal)
+################### ACIA: Alleles Contribution Initialization Algorithm (for any Binary SGOAL) using GABO ideas ######################
+# Init individual method of the GABO Algorithm
+def nextACIA( x, fx, sgoal ):
+  f, pick = sgoal['f'], sgoal['pick']
+  x, fx = allelesCheck(x, fx, sgoal)
   y, fy = bestByContribution(x, fx, sgoal)
-  yc, fyc = multiflip(y, fy, sgoal['coding'])
-  yc, fyc = codingCheck(yc, fyc, sgoal)
+  yc = complement(y)
+  fyc = f(yc)
+  yc, fyc = allelesCheck(x, fx, sgoal)
   y, fy, yc, fyc = pick(y, fy, yc, fyc)
   x, fx, y, fy = pick(x, fx, y, fy)
   y, fy = bestByContribution(x, fx, sgoal)
   x, fx, y, fy = pick(x, fx, y, fy)
   return x, fx
 
-# Init a population of candidate solutions for any SGoal using GABO2
-def GCOINN(sgoal):
-  N = sgoal['N']
-  sgoal['N'] = 1
-  x, fx = GCOIN(sgoal)
-  sgoal['N'] = N - 1 
-  P, fP = initPop(sgoal)
-  P.append(x)
-  fP.append(fx)
-  sgoal['N'] = N
-  return P, fP
+# ACIA
+def ACIA(problem):
+  D = problem['D']
+  problem['EVALS'] = 2*D + 4
+  problem['C'] = [[] for k in range(D)]
+  if('flip' not in problem): problem['flip'] = lambda x, fx, k: sflip(x, fx, k, problem)
+  if('multiflip' not in problem): problem['multiflip'] = lambda x, fx, k: mflip(x, fx, k, problem)
+  problem['next'] = lambda x, fx: nextACIA(x, fx, problem)
+  return SPSGoal(problem)

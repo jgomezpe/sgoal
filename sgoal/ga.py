@@ -21,11 +21,9 @@
 from sgoal.core import caneval
 from sgoal.core import randbool
 from sgoal.core import PopSGoal
+from sgoal.core import simplexover
 from sgoal.select import min_tournament
 from sgoal.select import max_tournament
-from sgoal.core import simplexover
-from sgoal.binary import bitmutation
-from sgoal.real import gaussianMutation
 
 ############### Genetic Algorithm - GA ################
 # problem: Problem to solve
@@ -75,7 +73,7 @@ def nextGGA(P, fP, sgoal):
       fQ.append(f(b))
   return Q, fQ
 
-############### Generational Genetic Algorithm - GGA ################
+############### Generic Generational Genetic Algorithm - GGA ################
 # problem: Problem to solve
 # config: GA Configuration
 #   selection: Selection Mechanism
@@ -85,7 +83,7 @@ def nextGGA(P, fP, sgoal):
 #   N: Population's size (we set to the closest higher even number)
 # initPop: Process for generating the initial population (by default uses the BitArraySpace generation method)
 # stop: Stopping criteria (by default uses the basic stopping criteria)
-def GGA(problem):
+def GGA_T(problem):
   problem['next'] = lambda P, fP: nextGGA(P, fP, problem)
   return GA(problem)
 
@@ -101,7 +99,7 @@ def nextSSGA(P, fP, sgoal):
       P[idx2], fP[idx2], b, fb = pick(P[idx2], fP[idx2], b, fb)
   return P, fP
 
-############### Steady State Genetic Algorithm - SSGA ################
+############### Generic Steady State Genetic Algorithm - SSGA ################
 # problem: Problem to solve
 # config: GA Configuration
 #   selection: Selection Mechanism
@@ -111,34 +109,6 @@ def nextSSGA(P, fP, sgoal):
 #   N: Population's size (we set to the closest higher even number)
 # initPop: Process for generating the initial population (by default uses the BitArraySpace generation method)
 # stop: Stopping criteria (by default uses the basic stopping criteria)
-def SSGA(problem):
+def SSGA_T(problem):
   problem['next'] = lambda P, fP: nextSSGA(P, fP, problem)
   return GA(problem)
-
-############# Binary versions ##############
-############### Generational Genetic Algorithm - SSGA ################
-def bmutation(sgoal):
-  if('mutation' not in sgoal): sgoal['mutation'] = bitmutation
-  return sgoal
-
-def BinaryGGA(problem):
-  return GGA(bmutation(problem))
-
-############### Steady State Genetic Algorithm - SSGA ################
-# problem: Problem to solve
-def BinarySSGA(problem):
-  return SSGA(bmutation(problem))
-
-############# Real versions ##############
-############### Generational Genetic Algorithm - SSGA ################
-def gmutation(sgoal):
-  if('mutation' not in sgoal): sgoal['mutation'] = gaussianMutation(sgoal)
-  return sgoal
-
-def RealGGA(problem):
-  return GGA(gmutation(problem))
-
-############### Steady State Genetic Algorithm - SSGA ################
-# problem: Problem to solve
-def RealSSGA(problem):
-  return SSGA(gmutation(problem))

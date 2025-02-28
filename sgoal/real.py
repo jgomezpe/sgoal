@@ -23,12 +23,19 @@ from sgoal.core import randbool
 from sgoal.core import SPACE
 from sgoal.core import PROBLEM
 from sgoal.core import simplegetN
-from sgoal.binary import Binary
+from sgoal.core import VRSGoal
+from sgoal.core import variation
+from sgoal.core import transposition
+from sgoal.core import simplexover
+from sgoal.real1 import rastrigin_1
+from sgoal.real1 import schwefel_1
+from sgoal.es import Rule1_5_T
+from sgoal.ga import SSGA_T
+from sgoal.ga import GGA_T
+from sgoal.chavela import CHAVELA_T
 
-# Checks if a real value x is in the interval [min,max]
-def feasibleR(min, max, x):
-  return min <= x <= max
 
+########### MyperRectangle/HyperCube Space [min,max] with min and max n-dimensional real vectors ###########
 # Checks if a real vector x is in the hyperrectangle [min,max]
 def feasibleRn(min, max, x):
   for i in range(len(x)):
@@ -36,111 +43,93 @@ def feasibleRn(min, max, x):
         return False
   return True
 
-# Gets a real in the interval [min,max]
-def getR(min, length):
-  return min + rand.random()*length
-
-# Gets a real vector in the hyperrectangle [min,max]
-def getRn(min, length):
-  return [min[i] + rand.random()*length[i] for i in range(len(min))]
-
-# Creates a real vector interval/hyperrectangle (according to D and values min and max) as search space
-def RealSpace(min, max, D=0):
-  if(D>1):
-    min = [min for i in range(D)]
-    max = [max for i in range(D)]
-  if(isinstance(min , list)):
-    length = [max[i]-min[i] for i in range(len(min))]
-    g = lambda: getRn(min, length)
-    space = SPACE(g, lambda N: simplegetN(N,g), lambda x: feasibleRn(min, max, x))
-    space['D'] = len(min)
-  else:
-    length = max - min
-    g = lambda: getR(min, length)
-    space = SPACE(g, lambda N: simplegetN(N,g), lambda x: feasibleR(min, max, x))
-    space['D'] = 1
-  space['RSMIN'] = min
-  space['RSLENGTH'] = length
+# Creates a real vector interval/hyperrectangle (according to values min and max) as search space
+def HyperRectangle(min, max, g=None, gn=None, feasible=None):
+  length = [max[i]-min[i] for i in range(len(min))]
+  if(g==None): g = lambda: [min[i] + rand.random()*length[i] for i in range(len(min))]
+  if(gn==None): gn = lambda N: simplegetN(N,g)
+  if(feasible==None): feasible = lambda x: feasibleRn(min, max, x)
+  space = SPACE(g, gn, feasible)
+  space['D'] = len(min)
+  space['hyperrectangle'] = [min, max, length]
   return space
 
-# Gaussian number generation
-def gaussian(sigma=1.0): return rand.gauss(sigma)
+def HyperCube(min, max, D, g=None, gn=None, feasible=None):
+  return HyperRectangle([min for i in range(D)], [max for i in range(D)], g, gn, feasible)
 
-# Power law number generation
-def powerlaw(a=-2.0):
-  if a==-2.0: return 1/(1-rand.random())
-  else: return (1-rand.random())**(1/(a+1))
-
-############### VARIATION OPERATIONS ################
-# Applies a mutation to each real component with probability p
-def intensity_mutation(x, mutation, p):
+############# Variations ##############
+# N-Dimensional Gaussian mutation
+def hyperGaussianSigmaProb(x, sigma, feasible, p):
   y = x.copy()
   for i in range(len(y)):
-    if( randbool(p) ): y[i] = mutation(y[i]) 
-  return y
+     if(randbool(p)):
+        y[i] += rand.gauss(sigma[i])
+  return y if feasible(y) else x
 
-# Gaussian Mutation for real numbers
-def gaussianMutationR( x, sgoal ):
-  sigma = sgoal['RSLENGTH']/100
-  y = x + gaussian(sigma)
-  return y if sgoal['feasible'](y) else x
+def hypergaussiansigma(x, sigma, feasible):
+  return hyperGaussianSigmaProb(x, sigma, feasible, 1.0/len(x))
 
-# Gaussian Mutation for real vectors
-def gaussianMutationRn( x, sgoal ):
-  y = x.copy()
-  i = rand.randint(0,len(x)-1)
-  sigma = sgoal['RSLENGTH'][i]/100
-  y[i] += gaussian(sigma) # = [z + gaussian(sigma) for z in x]
-  return y if sgoal['feasible'](y) else x
+def hypergaussian(sigma, feasible): return lambda x: hypergaussiansigma(x, sigma, feasible)
 
-# Gaussian Mutation for real vectors spaces
-def gaussianMutation(sgoal):
-  D = sgoal['D']
-  if( D==1 ): return lambda x: gaussianMutationR(x, sgoal)
-  return lambda x: gaussianMutationRn(x, sgoal)
-
-
-##################### REAL TO BINARY #####################
-# Grows a binary representation to real vector representation
-def grow1(x, min, length, SIZE, i=0):
-  s = 0
-  p = 1
-  start = i*SIZE
-  for k in range(start, start+SIZE):
-    if( x[k] == 1):
-      s += p
-    p *= 2
-  return min + (s/p)*length
-
-def grow(x, min, length, SIZE=16):
-  return [grow1(x, min[i], length[i], SIZE, i) for i in range(len(x)//SIZE)]
-
-def Real2Binary(min, max, D=0, BITSIZE=32):
-  if(D>1):
-    min = [min for i in range(D)]
-    max = [max for i in range(D)]
-    D *= BITSIZE
+def hypergaussianmutation(problem):
+  if( 'hyperrectangle' in problem):
+    L = problem['hyperrectangle'][2].copy()
+    sigma = [s/100 for s in L]
   else:
-    D = BITSIZE
-  space = Binary(D)
-  if(isinstance(min , list)):
-    length = [max[i]-min[i] for i in range(len(min))]
-    space['feasible'] = lambda x: feasibleRn(min, max, x)
-    space['grow'] = lambda x: grow(x, min, length, BITSIZE)
-  else:
-    length = max - min
-    space['feasible'] = lambda x: feasibleR(min, max, x)
-    space['grow'] = lambda x: grow1(x, min, length, BITSIZE)
-  return space
+    D = problem['D']
+    sigma = [0.2 for i in range(D)]
+  problem['sigma'] = sigma
+  feasible = problem['feasible']
+  return hypergaussian(sigma, feasible)
 
-def Real2BinaryPROBLEM(type, f, space, EVALS, TRACE=False):
-  return PROBLEM(type, lambda x: f(space['grow'](x)), space, EVALS, TRACE)
+def gaussianmutation(sgoal):
+  if('mutation' not in sgoal): sgoal['mutation'] = hypergaussianmutation(sgoal)
+  return sgoal
+
+##################### SGOALs ###########################
+# Classical Hill Climbing Algorithm for Real problems. Uses Gaussian mutation with sigma=0.2 as variation operator
+# problem: Problem to solve
+def HC(problem): 
+  if( 'variation' not in problem ): problem['variation'] = hypergaussianmutation(problem)
+  return VRSGoal(problem) 
+
+# 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
+# Beyer, Hans-Georg & Schwefel, Hans-Paul. (2002). Evolution strategies - A comprehensive introduction. 
+# Natural Computing. 1. 3-52. 10.1023/A:1015059928466. 
+# Scale the current sigma parameter
+def scalesigma( problem ):
+  v = problem['parameter']
+  sigma = problem['sigma']
+  sigma = [s*v for s in sigma]
+  problem['sigma'] = sigma
+  problem['variation'] = lambda x, fx: variation(x, fx, hypergaussianmutation(problem), problem)
+
+# 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule
+def Rule1_5(problem):
+  D = problem['D']
+  if( 'parameter' not in problem ): problem['parameter'] = 1
+  if( 'variation' not in problem ): 
+    problem['scaleparameter'] = lambda : scalesigma(problem)
+    problem['variation'] = hypergaussianmutation(problem)
+  if( 'G' not in problem ): problem['G'] = D
+  return Rule1_5_T(problem)
+
+############## Generational Genetic Algorithm - SSGA ################
+def GGA(problem):
+  return GGA_T(gaussianmutation(problem))
+
+############### Steady State Genetic Algorithm - SSGA ################
+# problem: Problem to solve
+def SSGA(problem):
+  return SSGA_T(gaussianmutation(problem))
+
+# Standard CHAVELA for Real problems. Uses gaussianmutation, simplexover, and transposition as operators
+def CHAVELA(problem):
+  if( 'operators' not in problem ): problem['operators'] = [hypergaussianmutation(problem), simplexover, transposition]
+  return CHAVELA_T(problem) 
 
 #################### TEST FUNCTIONS ##############
 # Sphere function
-def sphere_1(x):
-   return x*x
-
 def sphere(x):
    s = 0.0
    for y in x:
@@ -148,9 +137,6 @@ def sphere(x):
    return s
 
 # Rastrigin function as proposed by Rastrigin, L. A. in "Systems of extremal control." Mir, Moscow (1974).
-def rastrigin_1( x ):
-	return x*x - 10.0*math.cos(2.0*math.pi*x)
-
 def rastrigin( x ):
   f = 0.0
   for c in x:
@@ -158,9 +144,6 @@ def rastrigin( x ):
   return 10.0*len(x) + f
 
 # Schwefel Function
-def schwefel_1( x ):
-	return -x * math.sin(math.sqrt(abs(x)))
-
 def schwefel( x ):
   f = 0.0
   for c in x:
@@ -202,25 +185,13 @@ def ackley( x ):
   return s-a*math.exp(-b*(p/D)**0.5) - math.exp(q/D)
 
 ##################### TEST PROBLEMS ####################
-def RealTestProblem(f, D, EVALS, TRACE=False):
-  if(f=='Rastrigin'): problem = PROBLEM('min', rastrigin, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
-  elif(f=='Schwefel'): problem = PROBLEM('min', schwefel, RealSpace(-500.0, 500.0, D), EVALS, TRACE)
-  elif(f=='Griewank'): problem = PROBLEM('min', griewank, RealSpace(-600.0, 600.0, D), EVALS, TRACE)
-  elif(f=='Rosenbrock'): problem = PROBLEM('min', rosenbrock_saddle, RealSpace(-2.048, 2.048, D), EVALS, TRACE)
-  elif(f=='Ackley'): problem = PROBLEM('min', ackley, RealSpace(-32.768, 32.768, D), EVALS, TRACE)
-  elif(f=='Sphere'): problem = PROBLEM('min', sphere, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
-  else: problem = PROBLEM('min', sphere, RealSpace(-5.12, 5.12, D), EVALS, TRACE)
-  problem['optimum'] = 0.0
-  return problem
-
-##################### TEST PROBLEMS AS BINARY ####################
-def Real2BinaryTestProblem(f, D, EVALS, BITSIZE = 32, TRACE=False):
-  if(f=='Rastrigin'): problem = Real2BinaryPROBLEM('min', rastrigin, Real2Binary(-5.12, 5.12, D, BITSIZE), EVALS, TRACE)
-  elif(f=='Schwefel'): problem = Real2BinaryPROBLEM('min', schwefel, Real2Binary(-500.0, 500.0, D, BITSIZE), EVALS, TRACE)
-  elif(f=='Griewank'): problem = Real2BinaryPROBLEM('min', griewank, Real2Binary(-600.0, 600.0, D, BITSIZE), EVALS, TRACE)
-  elif(f=='Rosenbrock'): problem = Real2BinaryPROBLEM('min', rosenbrock_saddle, Real2Binary(-2.048, 2.048, D, BITSIZE), EVALS, TRACE)
-  elif(f=='Ackley'): problem = Real2BinaryPROBLEM('min', ackley, Real2Binary(-32.768, 32.768, D, BITSIZE), EVALS, TRACE)
-  elif(f=='Sphere'): problem = Real2BinaryPROBLEM('min', sphere, Real2Binary(-5.12, 5.12, D, BITSIZE), EVALS, TRACE)
-  else: problem = Real2BinaryPROBLEM('min', sphere, Real2Binary(-5.12, 5.12, D, BITSIZE), EVALS, TRACE)
+def TestProblem(f, D, EVALS, TRACE=False):
+  if(f=='Rastrigin'): problem = PROBLEM('min', rastrigin, HyperCube(-5.12, 5.12, D), EVALS, TRACE)
+  elif(f=='Schwefel'): problem = PROBLEM('min', schwefel, HyperCube(-500.0, 500.0, D), EVALS, TRACE)
+  elif(f=='Griewank'): problem = PROBLEM('min', griewank, HyperCube(-600.0, 600.0, D), EVALS, TRACE)
+  elif(f=='Rosenbrock'): problem = PROBLEM('min', rosenbrock_saddle, HyperCube(-2.048, 2.048, D), EVALS, TRACE)
+  elif(f=='Ackley'): problem = PROBLEM('min', ackley, HyperCube(-32.768, 32.768, D), EVALS, TRACE)
+  elif(f=='Sphere'): problem = PROBLEM('min', sphere, HyperCube(-5.12, 5.12, D), EVALS, TRACE)
+  else: problem = PROBLEM('min', sphere, HyperCube(-5.12, 5.12, D), EVALS, TRACE)
   problem['optimum'] = 0.0
   return problem
