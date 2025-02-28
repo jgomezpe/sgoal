@@ -6,6 +6,8 @@ A Stochastic Global Optimization ALgorithm (SGoal) is an iterative algorithm tha
 
 A formal description is provided by Jonatan Gomez in "Stochastic global optimization algorithms: A systematic formal approach", Information Sciences, Volume 472, 2019, Pages 53-76, ISSN 0020-0255, https://doi.org/10.1016/j.ins.2018.09.021. (https://www.sciencedirect.com/science/article/pii/S0020025517305248)
 
+sgoal.ipynb is a COLAB demo version (https://github.com/jgomezpe/sgoal/blob/main/sgoal.ipynb)
+
 This library includes the following SGoals:
 <ul>
   <li>GGA: Generational Genetic Algorithm with tournament 4 as parent's selection mechanism.</li>
