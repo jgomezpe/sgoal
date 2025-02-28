@@ -63,7 +63,7 @@ def hyperGaussianSigmaProb(x, sigma, feasible, p):
   y = x.copy()
   for i in range(len(y)):
      if(randbool(p)):
-        y[i] += rand.gauss(sigma[i])
+        y[i] += rand.gauss(0.0, sigma[i])
   return y if feasible(y) else x
 
 def hypergaussiansigma(x, sigma, feasible):
