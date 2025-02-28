@@ -229,7 +229,7 @@ def nextACIA( x, fx, sgoal ):
   y, fy = bestByContribution(x, fx, sgoal)
   yc = complement(y)
   fyc = f(yc)
-  yc, fyc = allelesCheck(x, fx, sgoal)
+  yc, fyc = allelesCheck(yc, fyc, sgoal)
   y, fy, yc, fyc = pick(y, fy, yc, fyc)
   x, fx, y, fy = pick(x, fx, y, fy)
   y, fy = bestByContribution(x, fx, sgoal)
