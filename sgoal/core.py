@@ -62,14 +62,41 @@ def PROBLEM(type, f, space, EVALS, TRACE=False):
   return space
 
 ############### GENERIC LIST VARIATION OPERATIONS ################
+# Variation 1 to 1: applies a variation and computes the function on the produced candidate solution
+def variation11( x, fx, oper, sgoal):  
+  y = oper(x)
+  fy = sgoal['f'](y)
+  return y, fy
+
+# Variation 2 to 1: applies a two parents variation, builds a candidate solution and computes the function on it
+def variation21( x, y, fx, fy, oper, sgoal):  
+  y1, y2 = oper(x, y)
+  if(randbool()): y1, y2 = y2, y1
+  fy1 = sgoal['f'](y1)
+  return y1, fy1
+
+# Variation 2 to 2: applies a two parents variation, builds two candidate solutions and computes the function on them
+def variation22( x, fx, y, fy, oper, sgoal):  
+  y1, y2 = oper(x, y)
+  if(randbool()): y1, y2 = y2, y1
+  fy1 = sgoal['f'](y1)
+  fy2 = sgoal['f'](y2)
+  return y1, fy1, y2, fy2
+
 # Simple crossover.
 def simplexover( x1, x2 ):
   n = len(x1)
   p = rand.randint(1,n-1)
   y1 = x1[0:p] + x2[p:n]
   y2 = x2[0:p] + x1[p:n]
-  if(randbool()): y1, y2 = y2, y1
   return y1, y2
+
+# Crossover with mutation.
+def xovermutation( x1, x2, xover, mutation, xr=1.0 ):
+  if( randbool(xr) ): y1, y2 = xover(x1, x2)
+  else: y1, y2 = x1, x2
+  if(randbool()): y1, y2 = y2, y1
+  return mutation(y1), mutation(y2)
 
 # Transposition
 def transposition( x ):
@@ -165,7 +192,10 @@ def run( sgoal ):
   if(N>1): tracepop(fP, trace)
   while( not Stop() ):
     P, fP = NextPop(P, fP)
-    if(N>1): tracepop(fP, trace)
+    if(N>1): 
+      sgoal['P'] = P
+      sgoal['fP'] = fP
+      tracepop(fP, trace)
   return sgoal['best']
 
 ##################  SINGLE POINT SGOAL ####################
@@ -173,6 +203,7 @@ def run( sgoal ):
 def init(sgoal):
   if('start' in sgoal):
     start = sgoal['start']
+    sgoal['best'] = start.copy()
     x = start['x']
     fx = start['f']
     sgoal['count'] = start['evals'] if 'evals' in start else 1
@@ -199,12 +230,6 @@ def simplereplace(x, fx, y, fy, sgoal):
   x, fx, y, fy = sgoal['pick'](x, fx, y, fy)
   return x, fx
 
-# Simple variation method: applies a variation and computes the function on the produced candidate solution
-def variation( x, fx, oper, sgoal):  
-  y = oper(x)
-  fy = sgoal['f'](y)
-  return y, fy
-
 # Variation/Replace Single Point SGOAL. Extends the SGoal with keys:
 #   'variation': Variation operator. Wraps a variation operator if required (when it does not take into account SGOAL info)
 #   'replace': Replacement method. Set to simplereplace if not provided
@@ -213,7 +238,7 @@ def VRSGoal(problem):
   if('replace' not in problem): problem['replace'] = lambda x,fx, y, fy : simplereplace(x, fx, y, fy, problem)
   if('variation' in problem and arity(problem['variation'])==1): 
     v = problem['variation']
-    problem['variation'] = lambda x, fx: variation(x, fx, v, problem)
+    problem['variation'] = lambda x, fx: variation11(x, fx, v, problem)
   return SPSGoal(problem)
 
 ##################  POPULATION SGOAL ####################
@@ -230,16 +255,27 @@ def initPop(sgoal):
   f, N, getN = sgoal['f'], sgoal['N'], sgoal['getN']
   if('start' in sgoal):
     start = sgoal['start']
+    sgoal['best'] = start.copy()
     x = start['x']
     fx = start['f']
     sgoal['count'] = start['evals'] if 'evals' in start else 1
-    P = getN(N-1)
-    fP= evalPop(P, f)
+    if('complement' in sgoal):
+      xc = sgoal['complement'](x)
+      fxc = f(xc)
+      P = getN(N-2)
+      fP= evalPop(P, f)
+      P.append(xc)
+      fP.append(fxc)
+    else:  
+      P = getN(N-1)
+      fP= evalPop(P, f)
     P.append(x)
     fP.append(fx)
   else:
     P = getN(N)
     fP= evalPop(P, f)
+  sgoal['P'] = P
+  sgoal['fP'] = fP
   return P, fP
 
 # Population Based SGOAL. Sets the population size to 128 and uses initPop as initPopulation method if not provided

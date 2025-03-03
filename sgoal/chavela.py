@@ -32,7 +32,7 @@ from sgoal.util import arity
 from sgoal.select import min_tournament
 from sgoal.select import max_tournament
 from sgoal.core import initPop
-from sgoal.core import init
+from sgoal.core import init as initcore
 
 import random as rand
   
@@ -74,6 +74,21 @@ def tracerates(rates, trace):
     r[k] /= len(rates)
   trace['rates'].append(r)
 
+def apply( oper, x, fx, sgoal ):
+  P, fP, selection = sgoal['P'], sgoal['fP'], sgoal['selection']
+  a = arity(oper) 
+  if a > 1: 
+    parents = [x]
+    idxparents = selection(fP,a-1)
+    for k in idxparents:
+      parents.append(P[k])
+    c = oper(*parents)
+    c = c[rand.randint(0,len(c)-1)]
+  else: 
+    c = oper(x)
+  fc = sgoal['f'](c)
+  return c, fc
+
 # CHAVELA Inits Population: Generates a population (N individuals) following an inner 
 # population generation process (by default the space population generation)
 # and associates operator rates to each individual (M operators)
@@ -87,29 +102,14 @@ def init(sgoal):
 
 # CHAVELA next population method
 def next(P, fP, sgoal):
-  f, minimize, operators, pick, N, rates = sgoal['f'], sgoal['minimize'], sgoal['operators'], sgoal['pick'], sgoal['N'], sgoal['rates']
-  if(minimize): 
-    tournament = min_tournament
-    improves = min_improves
-  else: 
-    tournament = max_tournament
-    improves = max_improves
+  improves, operators, pick, N, rates = sgoal['improves'], sgoal['operators'], sgoal['pick'], sgoal['N'], sgoal['rates']
   Q = []
   fQ = []
   rQ = []
   for i in range(N):
     if(caneval(sgoal)):
       h = weighted(rates[i])
-      a = arity(operators[h]) 
-      if a > 1: 
-        parents = [P[i]]
-        idxparents = tournament(fP,a-1)
-        for k in idxparents:
-          parents.append(P[k])     
-        c = operators[h](*parents)[0]
-      else: 
-        c = operators[h](P[i])
-      fc = f(c)
+      c, fc = operators[h](P[i], fP[i])
       rQ.append(updateRates(improves(fP[i], fc), h, rates[i]))
       c, fc, p, fp = pick(P[i], fP[i], c, fc)
       Q.append(c)
@@ -128,11 +128,17 @@ def next(P, fP, sgoal):
 #   'operators': A list with the variation operators used by CHAVELA 
 #   'innerInit': Inner Init Population method by default set to initPop from sgoal.core
 def CHAVELA_T(problem):
-  sgoal = problem
-  if('innerInit' not in sgoal): sgoal['innerInit'] = initPop
-  sgoal['init'] = lambda : init(sgoal)
-  sgoal['next'] = lambda P, fP: next(P, fP, sgoal)
-  sgoal['rates'] = []
+  if(problem['minimize']): 
+    problem['improves'] = min_improves
+    if('selection' not in problem): problem['selection'] = min_tournament
+  else: 
+    problem['improves'] = max_improves
+    problem['selection'] = max_tournament
+  if('init' in problem): problem['innerInit'] = problem['init']
+  else: problem['innerInit'] = initPop
+  problem['init'] = lambda : init(problem)
+  problem['next'] = lambda P, fP: next(P, fP, problem)
+  problem['rates'] = []
   return PopSGoal(problem)
 
 ############### Single Point CHAVELA ############
@@ -165,7 +171,8 @@ def next1(x, fx, sgoal):
 #   'operators': A list with the variation operators used by CHAVELA 
 #   'innerInit': Inner Init candidate solution method by default set to init from sgoal.core
 def CHAVELA1_T(problem):
-  if('innerInit' not in problem): problem['innerInit'] = init
+  if('init' in problem): problem['innerInit'] = problem['init']
+  else: problem['innerInit'] = initcore
   problem['init'] = lambda: init1(problem)
   problem['next'] = lambda x, fx: next1(x, fx, problem)
   problem['rates'] = []

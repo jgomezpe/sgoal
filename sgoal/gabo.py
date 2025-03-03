@@ -27,6 +27,7 @@ from sgoal.binary import multiflip
 from sgoal.binary import complement
 from sgoal.binary import flip
 from sgoal.core import initPop
+from sgoal.core import evalPop
 from sgoal.core import init
 
 
@@ -224,6 +225,7 @@ def GABO(problem):
 ################### ACIA: Alleles Contribution Initialization Algorithm (for any Binary SGOAL) using GABO ideas ######################
 # Init individual method of the GABO Algorithm
 def nextACIA( x, fx, sgoal ):
+  ib = sgoal['best']['f']
   f, pick = sgoal['f'], sgoal['pick']
   x, fx = allelesCheck(x, fx, sgoal)
   y, fy = bestByContribution(x, fx, sgoal)
@@ -234,14 +236,20 @@ def nextACIA( x, fx, sgoal ):
   x, fx, y, fy = pick(x, fx, y, fy)
   y, fy = bestByContribution(x, fx, sgoal)
   x, fx, y, fy = pick(x, fx, y, fy)
+  fb = sgoal['best']['f']
+  if(ib==fb):
+    sgoal['ACIADone'] = True
+    sgoal['best']['evals'] = sgoal['count']
   return x, fx
 
 # ACIA
 def ACIA(problem):
   D = problem['D']
-  problem['EVALS'] = 2*D + 4
   problem['C'] = [[] for k in range(D)]
   if('flip' not in problem): problem['flip'] = lambda x, fx, k: sflip(x, fx, k, problem)
   if('multiflip' not in problem): problem['multiflip'] = lambda x, fx, k: mflip(x, fx, k, problem)
   problem['next'] = lambda x, fx: nextACIA(x, fx, problem)
-  return SPSGoal(problem)
+  problem = SPSGoal(problem)
+  stop = problem['stop'] 
+  problem['stop'] = lambda : stop() or ('ACIADone' in problem and problem ['ACIADone'])
+  return problem

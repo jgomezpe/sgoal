@@ -21,9 +21,15 @@
 from sgoal.core import caneval
 from sgoal.core import randbool
 from sgoal.core import PopSGoal
+from sgoal.core import variation11
+from sgoal.core import variation22
 from sgoal.core import simplexover
+from sgoal.core import xovermutation
 from sgoal.select import min_tournament
 from sgoal.select import max_tournament
+from sgoal.util import arity
+import random as rand
+
 
 ############### Genetic Algorithm - GA ################
 # problem: Problem to solve
@@ -41,36 +47,33 @@ def GA(problem):
   if( 'selection' not in problem ): 
     if(problem['minimize']): problem['selection'] = min_tournament
     else: problem['selection'] = max_tournament 
-  if( 'xover' not in problem ): problem['xover'] = simplexover
-  if( 'xr' not in problem ):  problem['xr'] = 0.7
+  if('nextpair' not in problem):
+    if( 'xr' not in problem ):  problem['xr'] = 0.7
+    mut = problem['mutation']
+    if( 'xover' not in problem ): xover = simplexover
+    else: xover = problem['xover']
+    problem['nextpair'] = lambda x, y : xovermutation(x, y, xover, mut, problem['xr'])
+  np = problem['nextpair']
+  if(arity(np)==2):
+    problem['nextpair'] = lambda x, fx, y, fy: variation22(x, fx, y, fy, np, problem)
+  elif(arity(np)==5):
+    problem['nextpair'] = lambda x, fx, y, fy: np(x, fx, y, fy, problem)
+    
   return PopSGoal(problem)
-
-def nextPair(P, fP, sgoal):
-  selection, xover, xr, mutation = sgoal['selection'], sgoal['xover'], sgoal['xr'], sgoal['mutation']
-  idx1, idx2 = selection(fP, 2)
-  if randbool(xr):
-    a, b = xover(P[idx1], P[idx2])
-    a = mutation(a)
-    b = mutation(b)
-  else:
-    a = P[idx1]
-    b = P[idx2]
-    a = mutation(a)
-    b = mutation(b)
-  return idx1, idx2, a, b
 
 ############### Generational Genetic Algorithm - GGA ################
 def nextGGA(P, fP, sgoal):
-  f, N = sgoal['f'], sgoal['N']
+  N, selection, nextpair = sgoal['N'], sgoal['selection'], sgoal['nextpair']
+  idx1, idx2 = selection(fP, 2)
   Q = []
   fQ = []
   for i in range(N//2):
     if(caneval(sgoal)):
-      idx1, idx2, a, b = nextPair(P, fP, sgoal)
+      a, fa, b, fb = nextpair(P[idx1], fP[idx1], P[idx2], fP[idx2])
       Q.append(a)
-      fQ.append(f(a))
+      fQ.append(fa)
       Q.append(b)
-      fQ.append(f(b))
+      fQ.append(fb)
   return Q, fQ
 
 ############### Generic Generational Genetic Algorithm - GGA ################
@@ -89,13 +92,12 @@ def GGA_T(problem):
 
 ############### Steady State Genetic Algorithm - GGA ################
 def nextSSGA(P, fP, sgoal):
-  f, N, pick = sgoal['f'], sgoal['N'], sgoal['pick']
+  N, nextpair, pick = sgoal['N'], sgoal['nextpair'], sgoal['pick']
   for i in range(N//2):
     if(caneval(sgoal)):
-      idx1, idx2, a, b = nextPair(P, fP, sgoal)
-      fa = f(a)
+      idx1, idx2 = rand.randint(0, N-1), rand.randint(0, N-1)
+      a, fa, b, fb = nextpair(P[idx1], fP[idx1], P[idx2], fP[idx2])
       P[idx1], fP[idx1], a, fa = pick(P[idx1], fP[idx1], a, fa)
-      fb = f(b)
       P[idx2], fP[idx2], b, fb = pick(P[idx2], fP[idx2], b, fb)
   return P, fP
 

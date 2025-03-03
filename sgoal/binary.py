@@ -22,19 +22,23 @@ from sgoal.core import SPACE
 from sgoal.core import PROBLEM
 from sgoal.core import randbool
 from sgoal.core import VRSGoal
-from sgoal.core import variation
+from sgoal.core import variation11
 from sgoal.core import simplexover
 from sgoal.core import transposition
 from sgoal.es import Rule1_5_T
 from sgoal.ga import SSGA_T
 from sgoal.ga import GGA_T
+from sgoal.chavela import apply
 from sgoal.chavela import CHAVELA_T
+from sgoal.chavela import CHAVELA1_T
+from sgoal.util import powerlaw
 
 # Fixed Length Binary Space
 # D : Length of the BitArray (Binary string)
 def Binary(D): 
   space = SPACE( lambda: [1 if randbool() else 0 for i in range(D)] )
   space['D'] = D
+  space['complement'] = complement
   return space
 
 ############### VARIATION OPERATIONS ################
@@ -67,6 +71,9 @@ def bitmutationprob(x, p):
       y[i] = 1 - y[i]
   return y
 
+def powerlawmutation(x):
+  return bitmutationprob(x, 0.005+(powerlaw()-1)/len(x))
+
 # Bit mutation. Flips a bit with probability 1/|x| (creates a new one - hard copy)
 def bitmutation(x): return bitmutationprob(x, 1.0/len(x))
 
@@ -89,7 +96,7 @@ def RMHC(problem):
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, for BitArray
 # problem: Problem to solve
 def setprob(problem):
-  problem['variation'] = lambda x, fx: variation(x, fx, lambda y: bitmutationprob(y, problem['parameter']), problem)
+  problem['variation'] = lambda x, fx: variation11(x, fx, lambda y: bitmutationprob(y, problem['parameter']), problem)
   
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule, see
 # Beyer, Hans-Georg & Schwefel, Hans-Paul. (2002). Evolution strategies - A comprehensive introduction. 
@@ -118,13 +125,16 @@ def SSGA(problem):
 
 # Standard CHAVELA for Binary problems. Uses bitmutation, simplexover, and transposition as operators
 def CHAVELA(problem):
-  if( 'operators' not in problem ): problem['operators'] = [bitmutation, simplexover, transposition]
-  return CHAVELA_T(problem) 
+  mutation = lambda x, fx: apply(bitmutation, x, fx, problem)
+  xover = lambda x, fx: apply(simplexover, x, fx, problem)
+  transp = lambda x, fx: apply(transposition, x, fx, problem)
+  if( 'operators' not in problem ): problem['operators'] = [mutation, xover, transp]
+  return CHAVELA_T(problem)
 
 # Standard CHAVELA1 for Binary problems
 def CHAVELA1(problem):
-  if( 'operators' not in problem ): problem['operators'] = [bitmutation, transposition]
-  return CHAVELA_T(problem) 
+  if( 'operators' not in problem ): problem['operators'] = [powerlawmutation, singlebitmutation]
+  return CHAVELA1_T(problem) 
 
 ##################### TEST FUNCTIONS #####################
 # Computing the MaxOnes function (sum of bits) from the start bit upto end-1 bit. 

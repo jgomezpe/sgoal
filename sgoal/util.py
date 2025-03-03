@@ -51,3 +51,8 @@ def index(x, A, ini=0, fin=-1):
     else: fin = m
   if(ini==fin or A[ini]!=x): return -1
   return ini
+
+# Power law number generation
+def powerlaw(a=-2.0):
+  if a==-2.0: return 1/(1-rand.random())
+  else: return (1-rand.random())**(1/(a+1))

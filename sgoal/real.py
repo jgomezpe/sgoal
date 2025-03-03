@@ -24,7 +24,7 @@ from sgoal.core import SPACE
 from sgoal.core import PROBLEM
 from sgoal.core import simplegetN
 from sgoal.core import VRSGoal
-from sgoal.core import variation
+from sgoal.core import variation11
 from sgoal.core import transposition
 from sgoal.core import simplexover
 from sgoal.real1 import rastrigin_1
@@ -33,6 +33,7 @@ from sgoal.es import Rule1_5_T
 from sgoal.ga import SSGA_T
 from sgoal.ga import GGA_T
 from sgoal.chavela import CHAVELA_T
+from sgoal.chavela import apply
 
 
 ########### MyperRectangle/HyperCube Space [min,max] with min and max n-dimensional real vectors ###########
@@ -63,7 +64,7 @@ def hyperGaussianSigmaProb(x, sigma, feasible, p):
   y = x.copy()
   for i in range(len(y)):
      if(randbool(p)):
-        y[i] += rand.gauss(0.0, sigma[i])
+        y[i] += rand.gauss(0, sigma[i])
   return y if feasible(y) else x
 
 def hypergaussiansigma(x, sigma, feasible):
@@ -86,6 +87,29 @@ def gaussianmutation(sgoal):
   if('mutation' not in sgoal): sgoal['mutation'] = hypergaussianmutation(sgoal)
   return sgoal
 
+# N-Dimensional Uniform mutation
+def hyperUniformProb(x, min, length, feasible, p):
+  y = x.copy()
+  for i in range(len(y)):
+     if(randbool(p)):
+        y[i] = min[i] + length[i]*rand.random()
+  return y if feasible(y) else x
+
+def hyperUniform(x, min, length, feasible):
+  return hyperUniformProb(x, min, length, feasible, 1.0/len(x))
+
+def hyperuniform(min, length, feasible): return lambda x: hyperUniform(x, min, length, feasible)
+
+def hyperuniformmutation(problem):
+  L = problem['hyperrectangle'][2].copy()
+  M = problem['hyperrectangle'][0].copy()
+  feasible = problem['feasible']
+  return hyperuniform(M, L, feasible)
+
+def uniformmutation(sgoal):
+  if('mutation' not in sgoal): sgoal['mutation'] = hyperuniformmutation(sgoal)
+  return sgoal
+
 ##################### SGOALs ###########################
 # Classical Hill Climbing Algorithm for Real problems. Uses Gaussian mutation with sigma=0.2 as variation operator
 # problem: Problem to solve
@@ -102,7 +126,7 @@ def scalesigma( problem ):
   sigma = problem['sigma']
   sigma = [s*v for s in sigma]
   problem['sigma'] = sigma
-  problem['variation'] = lambda x, fx: variation(x, fx, hypergaussianmutation(problem), problem)
+  problem['variation'] = lambda x, fx: variation11(x, fx, hypergaussianmutation(problem), problem)
 
 # 1+1 Evolutionary Strategy (Hill Climbing) with neutral mutations and 1/5th rule
 def Rule1_5(problem):
@@ -125,7 +149,13 @@ def SSGA(problem):
 
 # Standard CHAVELA for Real problems. Uses gaussianmutation, simplexover, and transposition as operators
 def CHAVELA(problem):
-  if( 'operators' not in problem ): problem['operators'] = [hypergaussianmutation(problem), simplexover, transposition]
+  mutation = lambda x, fx: apply(hypergaussianmutation(problem), x, fx, problem)
+  xover = lambda x, fx: apply(simplexover, x, fx, problem)
+  transp = lambda x, fx: apply(transposition, x, fx, problem)
+  if( 'operators' not in problem ): problem['operators'] = [mutation, xover, transp]
+
+  if( 'operators' not in problem ): problem['operators'] = [hypergaussianmutation(problem), transposition, simplexover]
+  #if( 'operators' not in problem ): problem['operators'] = [hypergaussianmutation(problem), hyperuniformmutation(problem), simplexover]
   return CHAVELA_T(problem) 
 
 #################### TEST FUNCTIONS ##############
